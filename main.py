@@ -1,10 +1,11 @@
 """main"""
-from src.utils import load_data, find_best_model
+from src.utils import parse_arguments, train_individual_models
+
 
 def main() -> None:
     """main"""
-    data = load_data("./TrainingData/L1_Train.csv")
-    model = find_best_model(data)
+    args = parse_arguments()
+    train_individual_models(args.data_folder)
 
 if __name__ == "__main__":
     main()

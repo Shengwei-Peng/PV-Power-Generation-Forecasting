@@ -1,11 +1,13 @@
 """utils"""
-from typing import Dict
+import argparse
+from pathlib import Path
+from typing import Dict, Any
 
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from tabulate import tabulate
-import pandas as pd
-from sklearn.base import RegressorMixin
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -56,7 +58,7 @@ def load_data(
 
 def find_best_model(
     data: Dict[str, Dict[str, pd.DataFrame]], random_state: int = 42
-    ) -> RegressorMixin:
+    ) -> Dict[str, Any]:
     """find_best_model"""
     models = {
         "Linear Regression": LinearRegression(),
@@ -67,33 +69,93 @@ def find_best_model(
         "Gradient Boosting": GradientBoostingRegressor(random_state=random_state),
         "K-Nearest Neighbors (KNN)": KNeighborsRegressor(),
         "XGBoost": XGBRegressor(random_state=random_state),
-        "LightGBM": LGBMRegressor(random_state=random_state),
-        "CatBoost": CatBoostRegressor(verbose=0, random_state=random_state)
+        "LightGBM": LGBMRegressor(verbose=-1, random_state=random_state),
+        "CatBoost": CatBoostRegressor(verbose=0, random_state=random_state),
     }
+    best_info = {
+        "model": None,
+        "name": "",
+        "metrics": {"MAE": float("inf")}
+    }
+
     results = []
-    best_model = None
-    best_mae = float("inf")
 
     with tqdm(models.items(), desc="Training Models", unit="model") as pbar:
         for name, model in pbar:
             pbar.set_description(f"Training {name}")
 
             model.fit(**data["train"])
-
             y_pred = model.predict(data["test"]["X"])
 
-            mae = mean_absolute_error(data["test"]["y"], y_pred)
-            results.append({"Model": name, "MAE": mae})
+            metrics = {
+                "MAE": mean_absolute_error(data["test"]["y"], y_pred),
+                "MSE": mean_squared_error(data["test"]["y"], y_pred),
+                "RMSE": np.sqrt(mean_squared_error(data["test"]["y"], y_pred)),
+                "R² Score": r2_score(data["test"]["y"], y_pred),
+            }
 
-            if mae < best_mae:
-                best_mae = mae
-                best_model = model
-                best_model_name = name
+            results.append({
+                "Model": name,
+                **metrics,
+            })
+
+            if metrics["MAE"] < best_info["metrics"]["MAE"]:
+                best_info.update({
+                    "model": model,
+                    "name": name,
+                    "metrics": metrics,
+                })
 
     results_df = pd.DataFrame(results).sort_values(by="MAE", ascending=True)
 
     print("\nModel Performance:")
     print(tabulate(results_df, headers="keys", tablefmt="pretty", showindex=False))
+    print(f"\nBest Model: {best_info['name']} with MAE: {best_info['metrics']['MAE']}")
 
-    print(f"\nBest Model: {best_model_name} with MAE: {best_mae}")
-    return best_model
+    return {
+        "model_name": best_info["name"],
+        "model": best_info["model"],
+        "metrics": best_info["metrics"]
+    }
+
+def parse_arguments() -> argparse.Namespace:
+    """parse_arguments"""
+    parser = argparse.ArgumentParser(description="PV Power Generation Forecast")
+    parser.add_argument(
+        "--data_folder", type=Path, help="Path to the folder containing CSV files for data"
+    )
+    return parser.parse_args()
+
+def train_individual_models(data_folder: Path) -> None:
+    """train_individual_models"""
+    results = []
+
+    for csv_file in data_folder.glob("*.csv"):
+        data = load_data(csv_file)
+        result = find_best_model(data)
+
+        results.append({
+            "File": csv_file.name,
+            "Best Model": result["model_name"],
+            "MAE": result["metrics"]["MAE"],
+            "MSE": result["metrics"]["MSE"],
+            "RMSE": result["metrics"]["RMSE"],
+            "R² Score": result["metrics"]["R² Score"]
+        })
+
+    results_df = pd.DataFrame(results)
+    average_metrics = results_df.mean(numeric_only=True).to_dict()
+
+    average_row = pd.DataFrame([{
+        "File": "Average",
+        "Best Model": "-",
+        "MAE": average_metrics["MAE"],
+        "MSE": average_metrics["MSE"],
+        "RMSE": average_metrics["RMSE"],
+        "R² Score": average_metrics["R² Score"]
+    }])
+    results_df = pd.concat([results_df, average_row], ignore_index=True)
+    results_df = results_df.sort_values(by="MAE", ascending=True)
+
+    print("\nModel Performance Across Datasets:")
+    print(tabulate(results_df, headers="keys", tablefmt="pretty", showindex=False))
