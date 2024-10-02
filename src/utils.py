@@ -20,6 +20,7 @@ def load_data(
     target_column: str = "Power(mW)",
     test_start_time: str = "09:00:00",
     test_end_time: str = "16:59:00",
+    test_days: int = 200,
     ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """load_data"""
     raw_data = pd.read_csv(file_path)
@@ -28,9 +29,13 @@ def load_data(
     test_start_time = pd.to_datetime(test_start_time).time()
     test_end_time = pd.to_datetime(test_end_time).time()
 
+    max_date = raw_data["DateTime"].max()
+    min_test_date = max_date - pd.Timedelta(days=test_days)
+    is_in_test_days = raw_data["DateTime"] >= min_test_date
+
     is_in_time_range = raw_data["DateTime"].dt.time.between(test_start_time, test_end_time)
-    test_data = raw_data[is_in_time_range].copy()
-    train_data = raw_data[~is_in_time_range].copy()
+    test_data = raw_data[is_in_test_days & is_in_time_range].copy()
+    train_data = raw_data[~(is_in_test_days & is_in_time_range)].copy()
 
     for df in [train_data, test_data]:
         df.loc[:, "hour"] = df["DateTime"].dt.hour
@@ -49,19 +54,21 @@ def load_data(
     }
     return data
 
-def find_best_model(data: Dict[str, Dict[str, pd.DataFrame]]) -> RegressorMixin:
+def find_best_model(
+    data: Dict[str, Dict[str, pd.DataFrame]], random_state: int = 42
+    ) -> RegressorMixin:
     """find_best_model"""
     models = {
         "Linear Regression": LinearRegression(),
-        "Ridge Regression": Ridge(),
-        "Lasso Regression": Lasso(),
+        "Ridge Regression": Ridge(random_state=random_state),
+        "Lasso Regression": Lasso(random_state=random_state),
         "Support Vector Regression (SVR)": SVR(),
-        "Random Forest": RandomForestRegressor(),
-        "Gradient Boosting": GradientBoostingRegressor(),
+        "Random Forest": RandomForestRegressor(random_state=random_state),
+        "Gradient Boosting": GradientBoostingRegressor(random_state=random_state),
         "K-Nearest Neighbors (KNN)": KNeighborsRegressor(),
-        "XGBoost": XGBRegressor(),
-        "LightGBM": LGBMRegressor(),
-        "CatBoost": CatBoostRegressor(verbose=0)
+        "XGBoost": XGBRegressor(random_state=random_state),
+        "LightGBM": LGBMRegressor(random_state=random_state),
+        "CatBoost": CatBoostRegressor(verbose=0, random_state=random_state)
     }
     results = []
     best_model = None
