@@ -17,6 +17,22 @@ from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 
 
+def parse_arguments() -> argparse.Namespace:
+    """parse_arguments"""
+    parser = argparse.ArgumentParser(description="PV Power Generation Forecast")
+    parser.add_argument(
+        "--data_folder",
+        type=Path,
+        required=True,
+        help="Path to the folder containing CSV files for data"
+    )
+    parser.add_argument(
+        "--combine_data", 
+        action="store_true",
+        help="Combine all CSV files in the folder and train a single model"
+    )
+    return parser.parse_args()
+
 def load_data(
     file_path: str,
     target_column: str = "Power(mW)",
@@ -60,6 +76,16 @@ def find_best_model(
     data: Dict[str, Dict[str, pd.DataFrame]], random_state: int = 42
     ) -> Dict[str, Any]:
     """find_best_model"""
+    data_dimensions = [
+        ["Training data (X)", data['train']['X'].shape],
+        ["Training target (y)", data['train']['y'].shape],
+        ["Testing data (X)", data['test']['X'].shape],
+        ["Testing target (y)", data['test']['y'].shape]
+    ]
+
+    print("\nData Dimensions:")
+    print(tabulate(data_dimensions, headers=["Data", "Shape"], tablefmt="pretty"))
+
     models = {
         "Linear Regression": LinearRegression(),
         "Ridge Regression": Ridge(random_state=random_state),
@@ -118,30 +144,49 @@ def find_best_model(
         "metrics": best_info["metrics"]
     }
 
-def parse_arguments() -> argparse.Namespace:
-    """parse_arguments"""
-    parser = argparse.ArgumentParser(description="PV Power Generation Forecast")
-    parser.add_argument(
-        "--data_folder", type=Path, help="Path to the folder containing CSV files for data"
-    )
-    return parser.parse_args()
-
-def train_individual_models(data_folder: Path) -> None:
-    """train_individual_models"""
+def train(data_folder: Path, combine_data: bool = False) -> None:
+    """train"""
     results = []
+    if combine_data:
+        combined_data = {
+            "train": {"X": pd.DataFrame(), "y": pd.Series(dtype=float)},
+            "test": {"X": pd.DataFrame(), "y": pd.Series(dtype=float)}
+        }
 
-    for csv_file in data_folder.glob("*.csv"):
-        data = load_data(csv_file)
-        result = find_best_model(data)
+        for csv_file in data_folder.glob("*.csv"):
+            data = load_data(csv_file)
 
+            for split in ["train", "test"]:
+                combined_data[split]["X"] = pd.concat(
+                    [combined_data[split]["X"], data[split]["X"]], ignore_index=True
+                )
+                combined_data[split]["y"] = pd.concat(
+                    [combined_data[split]["y"], data[split]["y"]], ignore_index=True
+                ).reset_index(drop=True)
+
+        result = find_best_model(combined_data)
         results.append({
-            "File": csv_file.name,
+            "File": "Combined Data",
             "Best Model": result["model_name"],
             "MAE": result["metrics"]["MAE"],
             "MSE": result["metrics"]["MSE"],
             "RMSE": result["metrics"]["RMSE"],
             "R² Score": result["metrics"]["R² Score"]
         })
+
+    else:
+        for csv_file in data_folder.glob("*.csv"):
+            data = load_data(csv_file)
+            result = find_best_model(data)
+
+            results.append({
+                "File": csv_file.name,
+                "Best Model": result["model_name"],
+                "MAE": result["metrics"]["MAE"],
+                "MSE": result["metrics"]["MSE"],
+                "RMSE": result["metrics"]["RMSE"],
+                "R² Score": result["metrics"]["R² Score"]
+            })
 
     results_df = pd.DataFrame(results)
     average_metrics = results_df.mean(numeric_only=True).to_dict()
