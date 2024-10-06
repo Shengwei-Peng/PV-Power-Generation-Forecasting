@@ -1,6 +1,6 @@
 """trainer"""
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 import numpy as np
 import pandas as pd
@@ -23,6 +23,7 @@ class Trainer:
         target_column: str = "Power(mW)",
         test_start_time: str = "09:00:00",
         test_end_time: str = "16:59:00",
+        window_size: int = 10,
         test_days: int = 200,
         random_state: int = 42
     ) -> None:
@@ -30,6 +31,7 @@ class Trainer:
         self.data_folder = data_folder
         self.combine_data = combine_data
         self.target_column = target_column
+        self.window_size = window_size
         self.test_start_time = pd.to_datetime(test_start_time).time()
         self.test_end_time = pd.to_datetime(test_end_time).time()
         self.test_days = pd.Timedelta(days=test_days)
@@ -83,16 +85,40 @@ class Trainer:
             df.loc[:, "minute"] = df["DateTime"].dt.minute
             df.loc[:, "second"] = df["DateTime"].dt.second
 
+        train_x, train_y = self.sliding_window(train_data, window_size=self.window_size)
+        test_x, test_y = self.sliding_window(test_data, window_size=self.window_size)
+
         return {
             "train": {
-                "X": train_data.drop(columns=[self.target_column, "DateTime"]),
-                "y": train_data[self.target_column]
+                "X": train_x,
+                "y": train_y
             },
             "test": {
-                "X": test_data.drop(columns=[self.target_column, "DateTime"]),
-                "y": test_data[self.target_column]
+                "X": test_x,
+                "y": test_y
             }
         }
+
+    def sliding_window(
+        self,
+        data: pd.DataFrame,
+        window_size: int
+        ) -> Tuple[pd.DataFrame, pd.Series]:
+        """sliding_window"""
+        target = data[self.target_column].values
+        features = data.drop(columns=[self.target_column, "DateTime"]).values
+
+        num_samples = len(data) - window_size
+        x = np.empty((num_samples, window_size * features.shape[1]))
+        y = np.empty(num_samples)
+
+        for i in range(num_samples):
+            x[i] = features[i:i + window_size].flatten()
+            y[i] = target[i + window_size]
+
+        x, y = pd.DataFrame(x), pd.Series(y)
+
+        return x, y
 
     def find_best_model(self, data: Dict[str, Dict[str, pd.DataFrame]]) -> Dict[str, Any]:
         """find_best_model"""
