@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from tabulate import tabulate
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
@@ -25,7 +25,7 @@ class Trainer:
         test_end_time: str = "16:59:00",
         window_size: int = 10,
         test_days: int = 200,
-        random_state: int = 42
+        random_state: int = 42,
     ) -> None:
         self.dataset: list = []
         self.data_folder = data_folder
@@ -36,26 +36,52 @@ class Trainer:
         self.test_end_time = pd.to_datetime(test_end_time).time()
         self.test_days = pd.Timedelta(days=test_days)
         self.random_state = random_state
+        self.models = {
+            "Linear Regression": LinearRegression(),
+            "Ridge Regression": Ridge(
+                random_state=self.random_state
+            ),
+            "Lasso Regression": Lasso(
+                random_state=self.random_state
+            ),
+            "ElasticNet Regression": ElasticNet(
+                random_state=self.random_state
+            ),
+            "K-Nearest Neighbors (KNN)": KNeighborsRegressor(
+                n_jobs=-1
+            ),
+            "Random Forest": RandomForestRegressor(
+                n_jobs=-1, random_state=self.random_state
+            ),
+            "Gradient Boosting": GradientBoostingRegressor(
+                random_state=self.random_state
+            ),
+            "XGBoost": XGBRegressor(
+                n_jobs=-1, random_state=self.random_state
+            ),
+            "LightGBM": LGBMRegressor(
+                verbose=-1, n_jobs=-1, random_state=self.random_state
+            ),
+            "CatBoost": CatBoostRegressor(
+                verbose=0, thread_count=-1, random_state=self.random_state
+            ),
+        }
 
     def pre_process(self) -> None:
         """pre_process"""
-        if self.combine_data:
-            combined_data  = {
-                "file_name": "Combined Data",
-                "train": {"X": pd.DataFrame(), "y": pd.Series(dtype=float)},
-                "test": {"X": pd.DataFrame(), "y": pd.Series(dtype=float)},
-            }
-
-        for csv_file in self.data_folder.glob("*.csv"):
+        for i, csv_file in enumerate(self.data_folder.glob("*.csv")):
             data = self.load_data(csv_file)
             if self.combine_data:
-                for split in ["train", "test"]:
-                    combined_data [split]["X"] = pd.concat(
-                        [combined_data[split]["X"], data[split]["X"]], ignore_index=True
-                    )
-                    combined_data[split]["y"] = pd.concat(
-                        [combined_data[split]["y"], data[split]["y"]], ignore_index=True
-                    ).reset_index(drop=True)
+                if i == 0:
+                    combined_data = data
+                else:
+                    for split in ["train", "test"]:
+                        combined_data[split]["X"] = np.concatenate(
+                            [combined_data[split]["X"], data[split]["X"]], axis=0
+                        )
+                        combined_data[split]["y"] = np.concatenate(
+                            [combined_data[split]["y"], data[split]["y"]], axis=0
+                        )
             else:
                 self.dataset.append({
                     "file_name": csv_file.name,
@@ -64,9 +90,13 @@ class Trainer:
                 })
 
         if self.combine_data:
-            self.dataset.append(combined_data)
+            self.dataset.append({
+                "file_name": "Combined Data",
+                "train": combined_data["train"],
+                "test": combined_data["test"]
+            })
 
-    def load_data(self, file_path: str) -> Dict[str, Dict[str, pd.DataFrame]]:
+    def load_data(self, file_path: str) -> Dict[str, Dict[str, np.ndarray]]:
         """Load and preprocess data."""
         raw_data = pd.read_csv(file_path)
         raw_data["DateTime"] = pd.to_datetime(raw_data["DateTime"])
@@ -85,8 +115,14 @@ class Trainer:
             df.loc[:, "minute"] = df["DateTime"].dt.minute
             df.loc[:, "second"] = df["DateTime"].dt.second
 
-        train_x, train_y = self.sliding_window(train_data, window_size=self.window_size)
-        test_x, test_y = self.sliding_window(test_data, window_size=self.window_size)
+        train_x = train_data.drop(columns=[self.target_column, "DateTime"]).values
+        train_y = train_data[self.target_column].values
+
+        test_x = test_data.drop(columns=[self.target_column, "DateTime"]).values
+        test_y = test_data[self.target_column].values
+
+        train_x, train_y = self.sliding_window(train_x, train_y)
+        test_x, test_y = self.sliding_window(test_x, test_y)
 
         return {
             "train": {
@@ -101,48 +137,23 @@ class Trainer:
 
     def sliding_window(
         self,
-        data: pd.DataFrame,
-        window_size: int
-        ) -> Tuple[pd.DataFrame, pd.Series]:
+        features: np.ndarray,
+        target: np.ndarray
+        ) -> Tuple[np.ndarray, np.ndarray]:
         """sliding_window"""
-        target = data[self.target_column].values
-        features = data.drop(columns=[self.target_column, "DateTime"]).values
 
-        num_samples = len(data) - window_size
-        x = np.empty((num_samples, window_size * features.shape[1]))
+        num_samples = len(features) - self.window_size
+        x = np.empty((num_samples, self.window_size * features.shape[1]))
         y = np.empty(num_samples)
 
         for i in range(num_samples):
-            x[i] = features[i:i + window_size].flatten()
-            y[i] = target[i + window_size]
-
-        x, y = pd.DataFrame(x), pd.Series(y)
+            x[i] = features[i:i + self.window_size].flatten()
+            y[i] = target[i + self.window_size - 1]
 
         return x, y
 
     def find_best_model(self, data: Dict[str, Dict[str, pd.DataFrame]]) -> Dict[str, Any]:
         """find_best_model"""
-        data_dimensions = [
-            ["Training data (X)", data['train']['X'].shape],
-            ["Training target (y)", data['train']['y'].shape],
-            ["Testing data (X)", data['test']['X'].shape],
-            ["Testing target (y)", data['test']['y'].shape]
-        ]
-
-        print("\nData Dimensions:")
-        print(tabulate(data_dimensions, headers=["Data", "Shape"], tablefmt="pretty"))
-
-        models = {
-            "Linear Regression": LinearRegression(),
-            "Ridge Regression": Ridge(random_state=self.random_state),
-            "Lasso Regression": Lasso(random_state=self.random_state),
-            "Random Forest": RandomForestRegressor(random_state=self.random_state),
-            "Gradient Boosting": GradientBoostingRegressor(random_state=self.random_state),
-            "K-Nearest Neighbors (KNN)": KNeighborsRegressor(),
-            "XGBoost": XGBRegressor(random_state=self.random_state),
-            "LightGBM": LGBMRegressor(verbose=-1, random_state=self.random_state),
-            "CatBoost": CatBoostRegressor(verbose=0, random_state=self.random_state),
-        }
 
         best_info = {
             "model": None,
@@ -152,7 +163,7 @@ class Trainer:
 
         results = []
 
-        with tqdm(models.items(), desc="Training Models", unit="model") as pbar:
+        with tqdm(self.models.items(), desc="Training Models", unit="model") as pbar:
             for name, model in pbar:
                 pbar.set_description(f"Training {name}")
 
@@ -195,6 +206,15 @@ class Trainer:
         """train"""
         results = []
         for data in self.dataset:
+            data_dimensions = [
+                ["Training data (X)", data['train']['X'].shape],
+                ["Training target (y)", data['train']['y'].shape],
+                ["Testing data (X)", data['test']['X'].shape],
+                ["Testing target (y)", data['test']['y'].shape]
+            ]
+            print("\nData Dimensions:")
+            print(tabulate(data_dimensions, headers=["Data", "Shape"], tablefmt="pretty"))
+
             result = self.find_best_model(data)
             results.append({
                 "File": data["file_name"],
