@@ -111,6 +111,8 @@ class Trainer:
         train_data = raw_data[~(is_in_test_days & is_in_time_range)].copy()
 
         for df in [train_data, test_data]:
+            df.loc[:, "month"] = df["DateTime"].dt.month
+            df.loc[:, "day"] = df["DateTime"].dt.day
             df.loc[:, "hour"] = df["DateTime"].dt.hour
             df.loc[:, "minute"] = df["DateTime"].dt.minute
             df.loc[:, "second"] = df["DateTime"].dt.second
@@ -231,10 +233,10 @@ class Trainer:
         average_row = pd.DataFrame([{
             "File": "Average",
             "Best Model": "-",
-            "MAE": average_metrics["MAE"],
-            "MSE": average_metrics["MSE"],
-            "RMSE": average_metrics["RMSE"],
-            "R² Score": average_metrics["R² Score"]
+            "MAE": round(average_metrics["MAE"], 4),
+            "MSE": round(average_metrics["MSE"], 1),
+            "RMSE": round(average_metrics["RMSE"], 4),
+            "R² Score": round(average_metrics["R² Score"], 4)
         }])
         results_df = pd.concat([results_df, average_row], ignore_index=True)
         results_df = results_df.sort_values(by="MAE", ascending=True)

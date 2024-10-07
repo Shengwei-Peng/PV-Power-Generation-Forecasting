@@ -19,7 +19,7 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
     > Raymin
 
 ## Results
-| Exp | Method                     | MAE      | MSE        | RMSE     | R² Score |
-| --- | -------------------------- | -------- | ---------- | -------- | -------- |
-| 001 | Random Forest (individual) | 126.4456 | 97277.6438 | 267.8911 | 0.6877   |
-| 002 | Random Forest (combined)   |  95.5347 | 52882.9839 | 229.9630 | 0.8394   |
+| Exp | Model    | MAE      | MSE      | RMSE     | R² Score | Note       |
+| --- | -------- | -------- | -------- | -------- | -------- | ---------- |
+| 001 | LightGBM | 81.7840  | 41748.5  | 204.3245 | 0.8732   |            |
+| 002 | LightGBM | 134.2215 | 104164.4 | 281.8344 | 0.6721   | Individual |
