@@ -2,3 +2,4 @@ __pycache__/
 .vscode/
 TrainingData
 catboost_info
+*test*
