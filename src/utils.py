@@ -38,8 +38,8 @@ def parse_arguments() -> dict:
     parser.add_argument(
         "--window_size",
         type=int,
-        default=10,
-        help="Window size for the time series forecasting model (default: 10)"
+        default=1,
+        help="Window size for the time series forecasting model (default: 1)"
     )
     parser.add_argument(
         "--test_days",
