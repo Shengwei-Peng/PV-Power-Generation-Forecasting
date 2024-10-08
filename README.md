@@ -23,7 +23,12 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 ## Dataset
 
 ## Results
-| Exp | Model    | MAE      | MSE      | RMSE     | R² Score | Note       |
-| --- | -------- | -------- | -------- | -------- | -------- | ---------- |
-| 001 | LightGBM | 81.7840  | 41748.5  | 204.3245 | 0.8732   |            |
-| 002 | LightGBM | 134.2215 | 104164.4 | 281.8344 | 0.6721   | Individual |
+| Exp | Model             | MAE      | MSE      | RMSE     | R² Score | Note       |
+| --- | ----------------- | -------- | -------- | -------- | -------- | ---------- |
+| 001 | Linear Regression | 138.6666 | 53683.0  | 231.6959 | 0.8370   |            |
+| 002 | XGBoost           | 89.3658  | 48590.8  | 220.4331 | 0.8524   |            |
+| 003 | LightGBM          | 81.7840  | 41748.5  | 204.3245 | 0.8732   |            |
+| 004 | CatBoost          | 93.5267  | 50719.8  | 225.2106 | 0.8460   |            |
+| 005 | NGBoost           | 89.7819  | 45448.0  | 213.1853 | 0.8620   |            |
+| 006 | TabNet            | 95.0234  | 49660.3  | 222.8460 | 0.8492   |            |
+| 007 | LightGBM          | 134.2215 | 104164.4 | 281.8344 | 0.6721   | Individual |

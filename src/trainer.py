@@ -7,12 +7,13 @@ import pandas as pd
 from tqdm import tqdm
 from tabulate import tabulate
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.linear_model import LinearRegression
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
+from ngboost import NGBRegressor
+from pytorch_tabnet.tab_model import TabNetRegressor
+
 
 class Trainer:
     """Trainer"""
@@ -38,24 +39,6 @@ class Trainer:
         self.random_state = random_state
         self.models = {
             "Linear Regression": LinearRegression(),
-            "Ridge Regression": Ridge(
-                random_state=self.random_state
-            ),
-            "Lasso Regression": Lasso(
-                random_state=self.random_state
-            ),
-            "ElasticNet Regression": ElasticNet(
-                random_state=self.random_state
-            ),
-            "K-Nearest Neighbors (KNN)": KNeighborsRegressor(
-                n_jobs=-1
-            ),
-            "Random Forest": RandomForestRegressor(
-                n_jobs=-1, random_state=self.random_state
-            ),
-            "Gradient Boosting": GradientBoostingRegressor(
-                random_state=self.random_state
-            ),
             "XGBoost": XGBRegressor(
                 n_jobs=-1, random_state=self.random_state
             ),
@@ -65,6 +48,10 @@ class Trainer:
             "CatBoost": CatBoostRegressor(
                 verbose=0, thread_count=-1, random_state=self.random_state
             ),
+            "NGBoost": NGBRegressor(
+                verbose=False, random_state=self.random_state
+            ),
+            "TabNet": TabNetRegressor(),
         }
 
     def pre_process(self) -> None:
@@ -129,11 +116,11 @@ class Trainer:
         return {
             "train": {
                 "X": train_x,
-                "y": train_y
+                "y": train_y.reshape(-1, 1)
             },
             "test": {
                 "X": test_x,
-                "y": test_y
+                "y": test_y.reshape(-1, 1)
             }
         }
 
@@ -169,7 +156,7 @@ class Trainer:
             for name, model in pbar:
                 pbar.set_description(f"Training {name}")
 
-                model.fit(**data["train"])
+                model.fit(data["train"]["X"], data["train"]["y"])
                 y_pred = model.predict(data["test"]["X"])
                 y_true = data["test"]["y"]
 
