@@ -21,7 +21,8 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
     > Raymin
 
 ## Dataset
-
+- Observe the outlier of Data 1-17
+- What's the collecting time 
 ## Results
 | Exp | Model             | MAE      | MSE      | RMSE     | R² Score | Note       |
 | --- | ----------------- | -------- | -------- | -------- | -------- | ---------- |
