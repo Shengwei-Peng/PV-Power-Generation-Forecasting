@@ -14,6 +14,7 @@ from catboost import CatBoostRegressor
 from ngboost import NGBRegressor
 from pytorch_tabnet.tab_model import TabNetRegressor
 
+from .models import MLPRegressor
 
 class Trainer:
     """Trainer"""
@@ -52,6 +53,7 @@ class Trainer:
                 verbose=False, random_state=self.random_state
             ),
             "TabNet": TabNetRegressor(),
+            "MLP": MLPRegressor(),
         }
 
     def pre_process(self) -> None:
