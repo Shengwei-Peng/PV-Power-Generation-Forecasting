@@ -31,4 +31,5 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 | 004 | CatBoost          | 93.5267  | 50719.8  | 225.2106 | 0.8460   |            |
 | 005 | NGBoost           | 89.7819  | 45448.0  | 213.1853 | 0.8620   |            |
 | 006 | TabNet            | 95.0234  | 49660.3  | 222.8460 | 0.8492   |            |
-| 007 | LightGBM          | 134.2215 | 104164.4 | 281.8344 | 0.6721   | Individual |
+| 007 | MLP               | 90.5893  | 44563.4  | 211.1003 | 0.8647   |            |
+| 008 | LightGBM          | 134.2215 | 104164.4 | 281.8344 | 0.6721   | Individual |
