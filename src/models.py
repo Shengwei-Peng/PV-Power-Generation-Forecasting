@@ -12,7 +12,7 @@ class MLPRegressor:
         self,
         lr: float = 0.001,
         epochs: int = 100,
-        batch_size: int = 32
+        batch_size: int = 1024
     ) -> None:
         self.lr = lr
         self.epochs = epochs
@@ -67,7 +67,6 @@ class MLPRegressor:
                 all_predictions.append(predictions.cpu().numpy())
 
         return np.vstack(all_predictions)
-
 
     def _build_model(self, input_dim: int) -> None:
         self.model = nn.Sequential(

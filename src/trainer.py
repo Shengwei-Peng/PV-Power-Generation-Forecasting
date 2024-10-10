@@ -15,7 +15,9 @@ from ngboost import NGBRegressor
 from pytorch_tabnet.tab_model import TabNetRegressor
 
 from .models import MLPRegressor
-from .utils import set_seed, get_dataset
+from .dataset import get_dataset
+from .utils import set_seed
+
 
 class Trainer:
     """Trainer"""
@@ -23,12 +25,12 @@ class Trainer:
         self,
         data_folder: Path,
         look_back_steps: int = 12,
-        n_test_months: int = 2,
+        n_valid_months: int = 2,
         random_state: int = 42,
         combine_data: bool = True,
     ) -> None:
         set_seed(random_state)
-        self.dataset = get_dataset(data_folder, look_back_steps, n_test_months, combine_data)
+        self.dataset = get_dataset(data_folder, look_back_steps, n_valid_months, combine_data)
         self.models = {
             "Linear Regression": LinearRegression(),
             "XGBoost": XGBRegressor(
