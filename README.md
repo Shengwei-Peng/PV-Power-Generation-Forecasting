@@ -51,12 +51,12 @@ python main.py \
     --combine_data
 ```
 
-| Argument            | Data Type | Default | Description                                                                                    |
-| ------------------- | --------- | ------- | ---------------------------------------------------------------------------------------------- |
-| `--data_folder`     | `Path`    | `None`  | Path to the folder containing the CSV files that hold the training data.                       |
-| `--look_back_steps` | `int`     | `12`    | Number of time steps (lags) to look back for preparing the time series data for model input.   |
-| `--n_valid_months`  | `int`     | `2`     | Number of most recent months to use as the validation set.                                     |
-| `--random_state`    | `int`     | `42`    | Integer used to ensure reproducibility of results by fixing the random seed.                   |
-| `--combine_data`    | `bool`    | `False` | If set, combines all CSV files in the folder and trains a single model with the combined data. |
+| Argument          | Type   | Default | Description                                                                                    |
+| ----------------- | ------ | ------- | ---------------------------------------------------------------------------------------------- |
+| `data_folder`     | `Path` | `None`  | Path to the folder containing the CSV files that hold the training data.                       |
+| `look_back_steps` | `int`  | `12`    | Number of time steps (lags) to look back for preparing the time series data for model input.   |
+| `n_valid_months`  | `int`  | `2`     | Number of most recent months to use as the validation set.                                     |
+| `random_state`    | `int`  | `42`    | Integer used to ensure reproducibility of results by fixing the random seed.                   |
+| `combine_data`    | `bool` | `False` | If set, combines all CSV files in the folder and trains a single model with the combined data. |
 
 ## 📈 Results
