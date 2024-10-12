@@ -32,21 +32,26 @@ class Trainer:
         set_seed(random_state)
         self.dataset = get_dataset(data_folder, look_back_steps, n_valid_months, combine_data)
         self.models = {
-            "Linear Regression": LinearRegression(),
-            "XGBoost": XGBRegressor(
-                n_jobs=-1, random_state=random_state
-            ),
-            "LightGBM": LGBMRegressor(
-                verbose=-1, n_jobs=-1, random_state=random_state
-            ),
-            "CatBoost": CatBoostRegressor(
-                verbose=0, thread_count=-1, random_state=random_state
-            ),
-            "NGBoost": NGBRegressor(
-                verbose=False, random_state=random_state
-            ),
-            "TabNet": TabNetRegressor(),
-            "MLP": MLPRegressor(),
+            "regression":{
+                "Linear Regression": LinearRegression(),
+                "XGBoost": XGBRegressor(
+                    n_jobs=-1, random_state=random_state
+                ),
+                "LightGBM": LGBMRegressor(
+                    verbose=-1, n_jobs=-1, random_state=random_state
+                ),
+                "CatBoost": CatBoostRegressor(
+                    verbose=0, thread_count=-1, random_state=random_state
+                ),
+                "NGBoost": NGBRegressor(
+                    verbose=False, random_state=random_state
+                ),
+                "TabNet": TabNetRegressor(),
+                "MLP": MLPRegressor(),
+            },
+            "time_series":{
+                "": None
+            },
         }
 
     def train(self) -> None:
@@ -91,7 +96,7 @@ class Trainer:
 
         results = []
 
-        with tqdm(self.models.items(), desc="Training Models", unit="model") as pbar:
+        with tqdm(self.models["regression"].items(), desc="Training Regression Models", unit="model") as pbar:
             for name, model in pbar:
                 pbar.set_description(f"Training {name}")
 
