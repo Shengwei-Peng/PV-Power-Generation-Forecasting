@@ -15,7 +15,7 @@ from ngboost import NGBRegressor
 from pytorch_tabnet.tab_model import TabNetRegressor
 
 from .models import MLPRegressor
-from .dataset import get_dataset
+from .dataset import get_dataset, show_data_shapes
 from .utils import set_seed
 
 
@@ -53,14 +53,7 @@ class Trainer:
         """train"""
         results = []
         for data in self.dataset:
-            data_dimensions = [
-                ["Train X", data["regression"]["train"]["x"].shape],
-                ["Train Y", data["regression"]["train"]["y"].shape],
-                ["Valid X", data["regression"]["valid"]["x"].shape],
-                ["Valid Y", data["regression"]["valid"]["y"].shape]
-            ]
-            print("\nData Dimensions:")
-            print(tabulate(data_dimensions, headers=["Data", "Shape"], tablefmt="pretty"))
+            show_data_shapes(data)
 
             result = self._find_best_model(data["regression"])
             results.append({

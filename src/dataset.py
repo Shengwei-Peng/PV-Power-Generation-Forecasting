@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import Dict, Tuple, Union, List
 
+from tabulate import tabulate
 import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -151,3 +152,33 @@ def get_dataset(
         })
 
     return dataset
+
+def show_data_shapes(data: dict) -> None:
+    """show_data_shapes"""
+    headers = ["Data Type", "Regression Shape", "Time Series Shape"]
+    data_shapes = []
+
+    data_types = ["Train X", "Train Y", "Valid X", "Valid Y"]
+
+    regression = data.get("regression", {})
+    time_series = data.get("time_series", {})
+
+    regression_shape = (
+        regression.get("train", {}).get("x", "-").shape if regression.get("train") else "-",
+        regression.get("train", {}).get("y", "-").shape if regression.get("train") else "-",
+        regression.get("valid", {}).get("x", "-").shape if regression.get("valid") else "-",
+        regression.get("valid", {}).get("y", "-").shape if regression.get("valid") else "-"
+    )
+
+    time_series_shape = (
+        time_series.get("train", {}).get("x", "-").shape if time_series.get("train") else "-",
+        time_series.get("train", {}).get("y", "-").shape if time_series.get("train") else "-",
+        time_series.get("valid", {}).get("x", "-").shape if time_series.get("valid") else "-",
+        time_series.get("valid", {}).get("y", "-").shape if time_series.get("valid") else "-"
+    )
+
+    for i, data_type in enumerate(data_types):
+        data_shapes.append([data_type, regression_shape[i], time_series_shape[i]])
+
+    print("\nData Shapes:")
+    print(tabulate(data_shapes, headers=headers, tablefmt="fancy_grid"))
