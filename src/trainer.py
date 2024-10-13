@@ -56,65 +56,36 @@ class Trainer:
 
     def train(self) -> None:
         """train"""
-        results = []
-        for data in self.dataset:
-            show_data_shapes(data)
+        results = [
+            self._find_best_model(data, model_type)
+            for data in self.dataset
+            for model_type in ["regression"]
+        ]
+        self._summarize_results(pd.DataFrame(results))
 
-            result = self._find_best_model(data["regression"])
-            results.append({
-                "File": data["file_name"],
-                "Best Model": result["model_name"],
-                "MAE": result["metrics"]["MAE"],
-                "MSE": result["metrics"]["MSE"],
-                "RMSE": result["metrics"]["RMSE"],
-                "R² Score": result["metrics"]["R² Score"]
-            })
-
-        results_df = pd.DataFrame(results)
-        average_metrics = results_df.mean(numeric_only=True).to_dict()
-
-        average_row = pd.DataFrame([{
-            "File": "Average",
-            "Best Model": "-",
-            "MAE": round(average_metrics["MAE"], 4),
-            "MSE": round(average_metrics["MSE"], 1),
-            "RMSE": round(average_metrics["RMSE"], 4),
-            "R² Score": round(average_metrics["R² Score"], 4)
-        }])
-        results_df = pd.concat([results_df, average_row], ignore_index=True)
-        results_df = results_df.sort_values(by="MAE", ascending=True)
-
-        print("\nModel Performance Across Datasets:")
-        print(tabulate(results_df, headers="keys", tablefmt="pretty", showindex=False))
-
-    def _find_best_model(self, data: Dict[str, Dict[str, pd.DataFrame]]) -> Dict[str, Any]:
+    def _find_best_model(
+        self,
+        data: Dict[str, Dict[str, pd.DataFrame]],
+        model_type: str,
+        ) -> Dict[str, Any]:
         best_info = {
             "model": None,
             "name": "",
             "metrics": {"MAE": float("inf")}
         }
-
         results = []
 
-        with tqdm(self.models["regression"].items(), desc="Training Regression Models", unit="model") as pbar:
+        with tqdm(self.models[model_type].items(), desc=f"Training {model_type} Models") as pbar:
             for name, model in pbar:
-                pbar.set_description(f"Training {name}")
+                pbar.set_description(f"Training {name}({model_type})")
 
-                model.fit(data["train"]["x"], data["train"]["y"])
-                y_pred = model.predict(data["valid"]["x"])
-                y_true = data["valid"]["y"]
+                model.fit(data[model_type]["train"]["x"], data[model_type]["train"]["y"])
+                y_pred = model.predict(data[model_type]["valid"]["x"])
+                y_true = data[model_type]["valid"]["y"]
 
-                metrics = {
-                    "MAE": mean_absolute_error(y_true, y_pred),
-                    "MSE": mean_squared_error(y_true, y_pred),
-                    "RMSE": np.sqrt(mean_squared_error(y_true, y_pred)),
-                    "R² Score": r2_score(y_true, y_pred),
-                }
+                metrics = self._calculate_metrics(y_true, y_pred)
+                results.append({"Model": name, **metrics})
 
-                results.append({
-                    "Model": name,
-                    **metrics,
-                })
 
                 if metrics["MAE"] < best_info["metrics"]["MAE"]:
                     best_info.update({
@@ -130,7 +101,41 @@ class Trainer:
         print(f"\nBest Model: {best_info['name']} with MAE: {best_info['metrics']['MAE']}")
 
         return {
-            "model_name": best_info["name"],
-            "model": best_info["model"],
-            "metrics": best_info["metrics"]
+            "File": data["file_name"],
+            "Model Type": model_type,
+            "Best Model": best_info["name"],
+            "MAE": best_info["metrics"]["MAE"],
+            "MSE": best_info["metrics"]["MSE"],
+            "RMSE": best_info["metrics"]["RMSE"],
+            "R² Score": best_info["metrics"]["R² Score"]
         }
+
+    def _calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+        return {
+            "MAE": mean_absolute_error(y_true, y_pred),
+            "MSE": mean_squared_error(y_true, y_pred),
+            "RMSE": np.sqrt(mean_squared_error(y_true, y_pred)),
+            "R² Score": r2_score(y_true, y_pred),
+        }
+
+    def _summarize_results(self, results_df: pd.DataFrame) -> None:
+        grouped = results_df.groupby("Model Type")
+
+        for model_type, group in grouped:
+            average_metrics = group.mean(numeric_only=True).to_dict()
+
+            average_row = {
+                "File": f"Average ({model_type})",
+                "Best Model": "-",
+                "MAE": round(average_metrics["MAE"], 4),
+                "MSE": round(average_metrics["MSE"], 1),
+                "RMSE": round(average_metrics["RMSE"], 4),
+                "R² Score": round(average_metrics["R² Score"], 4),
+            }
+
+            group = pd.concat([group, pd.DataFrame([average_row])], ignore_index=True)
+
+            group = group.sort_values(by="MAE", ascending=True)
+
+            print(f"\nModel Performance: {model_type}")
+            print(tabulate(group, headers="keys", tablefmt="pretty", showindex=False))
