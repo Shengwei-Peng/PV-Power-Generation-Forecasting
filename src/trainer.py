@@ -14,7 +14,7 @@ from catboost import CatBoostRegressor
 from ngboost import NGBRegressor
 from pytorch_tabnet.tab_model import TabNetRegressor
 
-from .models import MLPRegressor
+from .models import Model
 from .dataset import get_dataset, show_data_shapes
 from .utils import set_seed
 
@@ -47,10 +47,10 @@ class Trainer:
                     verbose=False, random_state=random_state
                 ),
                 "TabNet": TabNetRegressor(),
-                "MLP": MLPRegressor(),
+                "MLP": Model("MLP"),
             },
             "time_series":{
-                "": None
+                "LSTM": Model("LSTM"),
             },
         }
 
@@ -59,7 +59,7 @@ class Trainer:
         results = [
             self._find_best_model(data, model_type)
             for data in self.dataset
-            for model_type in ["regression"]
+            for model_type in ["regression", "time_series"]
         ]
         self._summarize_results(pd.DataFrame(results))
 
@@ -74,10 +74,11 @@ class Trainer:
             "metrics": {"MAE": float("inf")}
         }
         results = []
+        show_data_shapes(data)
 
         with tqdm(self.models[model_type].items(), desc=f"Training {model_type} Models") as pbar:
             for name, model in pbar:
-                pbar.set_description(f"Training {name}({model_type})")
+                pbar.set_description(f"Training {name} ({model_type})")
 
                 model.fit(data[model_type]["train"]["x"], data[model_type]["train"]["y"])
                 y_pred = model.predict(data[model_type]["valid"]["x"])
@@ -97,7 +98,7 @@ class Trainer:
         results_df = pd.DataFrame(results).sort_values(by="MAE", ascending=True)
 
         print("\nModel Performance:")
-        print(tabulate(results_df, headers="keys", tablefmt="pretty", showindex=False))
+        print(tabulate(results_df, headers="keys", tablefmt="grid", showindex=False))
         print(f"\nBest Model: {best_info['name']} with MAE: {best_info['metrics']['MAE']}")
 
         return {
@@ -125,7 +126,8 @@ class Trainer:
             average_metrics = group.mean(numeric_only=True).to_dict()
 
             average_row = {
-                "File": f"Average ({model_type})",
+                "File": "Average",
+                "Model Type": model_type,
                 "Best Model": "-",
                 "MAE": round(average_metrics["MAE"], 4),
                 "MSE": round(average_metrics["MSE"], 1),
@@ -138,4 +140,4 @@ class Trainer:
             group = group.sort_values(by="MAE", ascending=True)
 
             print(f"\nModel Performance: {model_type}")
-            print(tabulate(group, headers="keys", tablefmt="pretty", showindex=False))
+            print(tabulate(group, headers="keys", tablefmt="double_grid", showindex=False))

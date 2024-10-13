@@ -181,4 +181,4 @@ def show_data_shapes(data: dict) -> None:
         data_shapes.append([data_type, regression_shape[i], time_series_shape[i]])
 
     print("\nData Shapes:")
-    print(tabulate(data_shapes, headers=headers, tablefmt="fancy_grid"))
+    print(tabulate(data_shapes, headers=headers, tablefmt="rounded_grid"))
