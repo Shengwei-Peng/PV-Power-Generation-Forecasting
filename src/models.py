@@ -10,10 +10,10 @@ class Model:
     """Model"""
     def __init__(
         self,
-        model_type: str = "MLP",
-        lr: float = 0.0001,
+        model_type: str,
+        lr: float = 0.001,
         epochs: int = 100,
-        batch_size: int = 1024,
+        batch_size: int = 128,
     ) -> None:
         self.model_type = model_type
         self.lr = lr
@@ -51,7 +51,7 @@ class Model:
                 epoch_progress.set_postfix(epoch_loss=avg_loss)
 
     def predict(self, test_x: np.ndarray) -> np.ndarray:
-        """predict"""
+        """predict""" 
         self.model.eval()
         test_x_tensor = torch.tensor(test_x, dtype=torch.float32).to(self.device)
 
@@ -66,6 +66,10 @@ class Model:
                 all_predictions.append(predictions.cpu().numpy())
 
         return np.vstack(all_predictions)
+
+    def save(self, save_path: str) -> None:
+        """save"""
+        torch.save(self.model, save_path)
 
     def _build_model(self, x: np.ndarray) -> None:
         if self.model_type == "MLP":
@@ -103,12 +107,13 @@ class LSTM(nn.Module):
         super().__init__()
         self.lstm1 = nn.LSTM(input_dim, hidden_dim, num_layers=1, batch_first=True)
         self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, num_layers=1, batch_first=True)
+        self.dropout = nn.Dropout(0.2)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """forward"""
-        out, _ = self.lstm1(x)
-        out, _ = self.lstm2(out)
-        out = out[:, -1, :]
-        out = self.fc(out)
-        return out
+        x, _ = self.lstm1(x)
+        x, _ = self.lstm2(x)
+        x = self.dropout(x[:, -1, :])
+        x = self.fc(x)
+        return x
