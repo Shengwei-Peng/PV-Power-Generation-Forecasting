@@ -6,7 +6,7 @@ from tabulate import tabulate
 import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 def extract_serial_data(
     raw_data: pd.DataFrame
@@ -24,6 +24,22 @@ def extract_serial_data(
         location_code=extracted_values[5],
     )
     return raw_data
+
+def preprocess_data(
+    data: pd.DataFrame,
+    x_columns: List[str],
+    scaler_type: str = "minmax"
+    ) -> pd.DataFrame:
+    """preprocess_data"""
+    if scaler_type == "minmax":
+        scaler = MinMaxScaler()
+    elif scaler_type == "standard":
+        scaler = StandardScaler()
+    else:
+        raise ValueError(f"Unknown scaler type: {scaler_type}")
+
+    data[x_columns] = scaler.fit_transform(data[x_columns])
+    return data
 
 def split_train_valid_data(
     raw_data: pd.DataFrame,
@@ -101,6 +117,7 @@ def load_data(
         "Sunlight(Lux)",
     ]
     y_column = ["Power(mW)"]
+    raw_data = preprocess_data(raw_data, x_columns, "minmax")
 
     train_data, valid_data = split_train_valid_data(raw_data, n_valid_months)
 
