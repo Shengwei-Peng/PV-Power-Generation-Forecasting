@@ -13,7 +13,7 @@ def extract_serial_data(
     ) -> pd.DataFrame:
     """extract_serial_data"""
     pattern = r"(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})"
-    extracted_values = raw_data['Serial'].astype(str).str.extract(pattern).apply(pd.to_numeric)
+    extracted_values = raw_data["Serial"].astype(str).str.extract(pattern).apply(pd.to_numeric)
 
     raw_data = raw_data.assign(
         year=extracted_values[0],
@@ -24,22 +24,6 @@ def extract_serial_data(
         location_code=extracted_values[5],
     )
     return raw_data
-
-def preprocess_data(
-    data: pd.DataFrame,
-    x_columns: List[str],
-    scaler_type: str = "minmax"
-    ) -> pd.DataFrame:
-    """preprocess_data"""
-    if scaler_type == "minmax":
-        scaler = MinMaxScaler()
-    elif scaler_type == "standard":
-        scaler = StandardScaler()
-    else:
-        raise ValueError(f"Unknown scaler type: {scaler_type}")
-
-    data[x_columns] = scaler.fit_transform(data[x_columns])
-    return data
 
 def split_train_valid_data(
     raw_data: pd.DataFrame,
@@ -73,41 +57,34 @@ def create_time_series_data(
 
     return x, y
 
-def create_dataset(
-    train_data: pd.DataFrame,
-    valid_data: pd.DataFrame,
-    x_columns: List[str],
-    y_column: List[str],
-    look_back_steps: int
-    ) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
-    """create_dataset"""
-    train_x = train_data[x_columns].values
-    train_y = train_data[y_column].values
-    valid_x = valid_data[x_columns].values
-    valid_y = valid_data[y_column].values
+def pre_process(
+    x: np.ndarray,
+    y: np.ndarray,
+    scaler: Union[MinMaxScaler, StandardScaler],
+    look_back_steps: int,
+    fit_scaler: bool = False,
+    ) -> Dict[str, np.ndarray]:
+    """pre_process"""
 
-    train_x_ts, train_y_ts = create_time_series_data(train_x, look_back_steps)
-    valid_x_ts, valid_y_ts = create_time_series_data(valid_x, look_back_steps)
+    if fit_scaler:
+        x = scaler.fit_transform(x)
+    else:
+        x = scaler.transform(x)
 
-    return {
-        "time_series": {
-            "train": {"x": train_x_ts, "y": train_y_ts},
-            "valid": {"x": valid_x_ts, "y": valid_y_ts},
-        },
-        "regression": {
-            "train": {"x": train_x, "y": train_y},
-            "valid": {"x": valid_x, "y": valid_y},
-        },
-    }
+    x_ts, y_ts = create_time_series_data(x, look_back_steps)
+
+    return {"x": x, "y": y, "x_ts": x_ts, "y_ts": y_ts}
 
 def load_data(
-    file_path: Union[str, Path],
+    train_file_path: Union[str, Path],
+    test_file_path: Union[str, Path, None] = None,
     look_back_steps: int = 12,
-    n_valid_months: int = 2
+    n_valid_months: int = 2,
+    scaler_type: str = "minmax",
     ) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
     """load_data"""
-    raw_data = pd.read_csv(file_path)
-    raw_data = extract_serial_data(raw_data)
+
+    scaler = MinMaxScaler() if scaler_type == "minmax" else StandardScaler()
 
     x_columns = [
         "WindSpeed(m/s)",
@@ -117,28 +94,62 @@ def load_data(
         "Sunlight(Lux)",
     ]
     y_column = ["Power(mW)"]
-    raw_data = preprocess_data(raw_data, x_columns, "minmax")
 
-    train_data, valid_data = split_train_valid_data(raw_data, n_valid_months)
+    train_data = pd.read_csv(train_file_path)
+    train_data = extract_serial_data(train_data)
 
-    return create_dataset(train_data, valid_data, x_columns, y_column, look_back_steps)
+    train_data, valid_data = split_train_valid_data(train_data, n_valid_months)
+
+    train_data = pre_process(
+        train_data[x_columns], train_data[y_column], scaler, look_back_steps, fit_scaler=True
+    )
+    valid_data = pre_process(
+        valid_data[x_columns], valid_data[y_column], scaler, look_back_steps
+    )
+
+    datasets = {
+        "regression": {
+            "train": {"x": train_data["x"], "y": train_data["y"]},
+            "valid": {"x": valid_data["x"], "y": valid_data["y"]}
+        },
+        "time_series": {
+            "train": {"x": train_data["x_ts"], "y": train_data["y_ts"]},
+            "valid": {"x": valid_data["x_ts"], "y": valid_data["y_ts"]}
+        }
+    }
+    if test_file_path is not None:
+        test_data = pd.read_csv(test_file_path)
+        test_data = extract_serial_data(test_data)
+
+        test_processed = pre_process(
+            test_data[x_columns], test_data[y_column], scaler, look_back_steps
+        )
+
+        datasets["time_series"]["test"] = {"x": test_processed["x_ts"], "y": test_processed["y_ts"]}
+        datasets["regression"]["test"] = {"x": test_processed["x"], "y": test_processed["y"]}
+
+    return datasets
 
 def get_dataset(
-    data_folder: Union[Path, str],
+    train_folder: Union[Path, str],
+    test_folder: Union[Path, str, None] = None,
     look_back_steps: int = 12,
     n_valid_months: int = 2,
     combine_data: bool = True,
     ) -> List[Dict[str, Union[str, Dict[str, Dict[str, np.ndarray]]]]]:
     """get_dataset"""
 
-    if not isinstance(data_folder, Path):
-        data_folder = Path(data_folder)
+    if not isinstance(train_folder, Path):
+        train_folder = Path(train_folder)
+
+    if not isinstance(test_folder, Path):
+        test_folder = Path(test_folder)
 
     dataset = []
     combined_data = None
 
-    for csv_file in data_folder.glob("*.csv"):
-        data = load_data(csv_file, look_back_steps, n_valid_months)
+    for train_file, test_file in zip(train_folder.glob("*.csv"), test_folder.glob("*.csv")):
+        data = load_data(train_file, test_file, look_back_steps, n_valid_months)
 
         if combine_data:
             if combined_data is None:
@@ -154,9 +165,18 @@ def get_dataset(
                             [combined_data[data_type][split]["y"],
                             data[data_type][split]["y"]], axis=0
                         )
+                    if "test" in data[data_type]:
+                        combined_data[data_type]["test"]["x"] = np.concatenate(
+                            [combined_data[data_type]["test"]["x"],
+                            data[data_type]["test"]["x"]], axis=0
+                        )
+                        combined_data[data_type]["test"]["y"] = np.concatenate(
+                            [combined_data[data_type]["test"]["y"],
+                            data[data_type]["test"]["y"]], axis=0
+                        )
         else:
             dataset.append({
-                "file_name": csv_file.name,
+                "file_name": train_file.name,
                 "time_series": data["time_series"],
                 "regression": data["regression"]
             })
@@ -175,7 +195,7 @@ def show_data_shapes(data: dict) -> None:
     headers = ["Data Type", "Regression Shape", "Time Series Shape"]
     data_shapes = []
 
-    data_types = ["Train X", "Train Y", "Valid X", "Valid Y"]
+    data_types = ["Train X", "Train Y", "Valid X", "Valid Y", "Test X", "Test Y"]
 
     regression = data.get("regression", {})
     time_series = data.get("time_series", {})
@@ -184,14 +204,18 @@ def show_data_shapes(data: dict) -> None:
         regression.get("train", {}).get("x", "-").shape if regression.get("train") else "-",
         regression.get("train", {}).get("y", "-").shape if regression.get("train") else "-",
         regression.get("valid", {}).get("x", "-").shape if regression.get("valid") else "-",
-        regression.get("valid", {}).get("y", "-").shape if regression.get("valid") else "-"
+        regression.get("valid", {}).get("y", "-").shape if regression.get("valid") else "-",
+        regression.get("test", {}).get("x", "-").shape if regression.get("test") else "-",
+        regression.get("test", {}).get("y", "-").shape if regression.get("test") else "-"
     )
 
     time_series_shape = (
         time_series.get("train", {}).get("x", "-").shape if time_series.get("train") else "-",
         time_series.get("train", {}).get("y", "-").shape if time_series.get("train") else "-",
         time_series.get("valid", {}).get("x", "-").shape if time_series.get("valid") else "-",
-        time_series.get("valid", {}).get("y", "-").shape if time_series.get("valid") else "-"
+        time_series.get("valid", {}).get("y", "-").shape if time_series.get("valid") else "-",
+        time_series.get("test", {}).get("x", "-").shape if time_series.get("test") else "-",
+        time_series.get("test", {}).get("y", "-").shape if time_series.get("test") else "-"
     )
 
     for i, data_type in enumerate(data_types):

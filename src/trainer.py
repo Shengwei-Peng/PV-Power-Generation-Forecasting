@@ -23,14 +23,22 @@ class Trainer:
     """Trainer"""
     def __init__(
         self,
-        data_folder: Path,
+        train_folder: Path,
+        test_folder: Path,
         look_back_steps: int = 12,
         n_valid_months: int = 2,
         random_state: int = 42,
         combine_data: bool = True,
     ) -> None:
         set_seed(random_state)
-        self.dataset = get_dataset(data_folder, look_back_steps, n_valid_months, combine_data)
+        self.look_back_steps = look_back_steps
+        self.dataset = get_dataset(
+            train_folder=train_folder,
+            test_folder=test_folder,
+            look_back_steps=look_back_steps,
+            n_valid_months=n_valid_months,
+            combine_data=combine_data
+        )
         self.models = {
             "regression":{
                 "Linear Regression": LinearRegression(),
@@ -53,6 +61,7 @@ class Trainer:
                 "LSTM": Model("LSTM"),
             },
         }
+        self.best_models = {"regression": None, "time_series": None}
 
     def train(self) -> None:
         """train"""
@@ -100,6 +109,8 @@ class Trainer:
         print("\nModel Performance:")
         print(tabulate(results_df, headers="keys", tablefmt="grid", showindex=False))
         print(f"\nBest Model: {best_info['name']} with MAE: {best_info['metrics']['MAE']}")
+
+        self.best_models[model_type] = best_info["model"]
 
         return {
             "File": data["file_name"],

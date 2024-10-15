@@ -12,10 +12,16 @@ def parse_arguments() -> Dict:
     """parse_arguments"""
     parser = argparse.ArgumentParser(description="PV Power Generation Forecast")
     parser.add_argument(
-        "--data_folder",
+        "--train_folder",
         type=Path,
         required=True,
-        help="Path to the folder containing CSV files for data"
+        help="Path to the folder containing CSV files for train data"
+    )
+    parser.add_argument(
+        "--test_folder",
+        type=Path,
+        default=None,
+        help="Path to the folder containing CSV files for data for test data (optional)"
     )
     parser.add_argument(
         "--combine_data", 
