@@ -19,6 +19,7 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 - [ ] Rewrite the entire pipeline to comply with the competition format
     > Ken
 - [ ] Reproduce the【LSTM+迴歸分析】from the SampleCode for each dataset and document the results
+- [ ] Run sample code and write down the 【trained MSE】 for each data (1-17)
     > Raymin
 
 ## 💻 Installation
