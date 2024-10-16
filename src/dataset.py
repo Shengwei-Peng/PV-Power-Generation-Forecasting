@@ -86,7 +86,7 @@ def pre_process(
 
     x_ts, y_ts = create_time_series_data(x, look_back_steps)
 
-    return {"x": x, "y": y, "x_ts": x_ts, "y_ts": y_ts}
+    return {"x": x, "y": y.to_numpy(), "x_ts": x_ts, "y_ts": y_ts}
 
 def combine_location_data(
     combined_data: Union[None, Dict[str, Dict[str, np.ndarray]]],
