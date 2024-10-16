@@ -39,6 +39,7 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 ## 📊 Dataset
 - Observe the outlier of Data 1-17
 - Verify the data completeness.
+- Divide the data into training and validation datasets.
 
 ## 🚀 Usage
 To run the script for the PV power generation forecast, follow the usage command below. This assumes you have organized your datasets correctly in the specified folder.
