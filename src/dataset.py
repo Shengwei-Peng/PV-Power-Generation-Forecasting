@@ -8,21 +8,34 @@ import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-def extract_serial_data(
-    raw_data: pd.DataFrame
-    ) -> pd.DataFrame:
-    """extract_serial_data"""
-    pattern = r"(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})"
-    extracted_values = raw_data["Serial"].astype(str).str.extract(pattern).apply(pd.to_numeric)
+def extract_datetime(raw_data : pd.DataFrame) -> pd.DataFrame:
+    """extract_datetime"""
+    if "Serial" in raw_data .columns:
+        pattern = r"(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})"
+        extracted_values = raw_data["Serial"].astype(str).str.extract(pattern).apply(pd.to_numeric)
 
-    raw_data = raw_data.assign(
-        year=extracted_values[0],
-        month=extracted_values[1],
-        day=extracted_values[2],
-        hour=extracted_values[3],
-        minute=extracted_values[4],
-        location_code=extracted_values[5],
-    )
+        raw_data  = raw_data .assign(
+            year=extracted_values[0],
+            month=extracted_values[1],
+            day=extracted_values[2],
+            hour=extracted_values[3],
+            minute=extracted_values[4],
+            location_code=extracted_values[5],
+        )
+
+    elif "DateTime" in raw_data .columns:
+        raw_data ["DateTime"] = pd.to_datetime(raw_data["DateTime"])
+
+        raw_data  = raw_data .assign(
+            year=raw_data ["DateTime"].dt.year,
+            month=raw_data ["DateTime"].dt.month,
+            day=raw_data ["DateTime"].dt.day,
+            hour=raw_data ["DateTime"].dt.hour,
+            minute=raw_data ["DateTime"].dt.minute,
+        )
+    else:
+        raise ValueError("DataFrame must contain either 'Serial' or 'DateTime' column.")
+
     return raw_data
 
 def split_train_valid_data(
@@ -123,7 +136,7 @@ def load_data(
     y_column = ["Power(mW)"]
 
     train_data = pd.read_csv(train_file_path)
-    train_data = extract_serial_data(train_data)
+    train_data = extract_datetime(train_data)
 
     train_data, valid_data = split_train_valid_data(train_data, n_valid_months)
 
@@ -146,7 +159,7 @@ def load_data(
     }
     if test_file_path is not None:
         test_data = pd.read_csv(test_file_path)
-        test_data = extract_serial_data(test_data)
+        test_data = extract_datetime(test_data)
 
         test_processed = pre_process(
             test_data[x_columns], test_data[y_column], scaler, look_back_steps
