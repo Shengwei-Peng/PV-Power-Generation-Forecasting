@@ -57,7 +57,7 @@ python main.py \
 | ----------------- | ------ | ---------- | ---------------------------------------------------------------------------------------------- |
 | `train_folder`    | `Path` | `Required` | Path to the folder containing CSV files for training data.                                     |
 | `test_folder`     | `Path` | `None`     | Path to the folder containing CSV files for testing data (optional).                           |
-| `combine_data`    | `bool` | `False`    | If set, combines all CSV files in the folder and trains a single model with the combined data. |
+| `combine`         | `bool` | `False`    | If set, combines all CSV files in the folder and trains a single model with the combined data. |
 | `random_state`    | `int`  | `42`       | Integer used to ensure reproducibility of results by fixing the random seed.                   |
 | `n_valid_months`  | `int`  | `2`        | Number of most recent months to use as the validation set.                                     |
 | `look_back_steps` | `int`  | `12`       | Number of time steps (lags) to look back for preparing the time series data for model input.   |

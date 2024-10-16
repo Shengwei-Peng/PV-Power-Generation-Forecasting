@@ -28,7 +28,7 @@ class Trainer:
         look_back_steps: int = 12,
         n_valid_months: int = 2,
         random_state: int = 42,
-        combine_data: bool = True,
+        combine: bool = True,
     ) -> None:
         set_seed(random_state)
         self.look_back_steps = look_back_steps
@@ -37,7 +37,7 @@ class Trainer:
             test_folder=test_folder,
             look_back_steps=look_back_steps,
             n_valid_months=n_valid_months,
-            combine_data=combine_data
+            combine=combine
         )
         self.models = {
             "regression":{

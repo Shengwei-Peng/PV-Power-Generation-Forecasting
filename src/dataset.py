@@ -75,6 +75,33 @@ def pre_process(
 
     return {"x": x, "y": y, "x_ts": x_ts, "y_ts": y_ts}
 
+def combine_location_data(
+    combined_data: Union[None, Dict[str, Dict[str, np.ndarray]]],
+    new_data: Dict[str, Dict[str, np.ndarray]]
+    ) -> Dict[str, Dict[str, np.ndarray]]:
+    """combine_location_data"""
+
+    if combined_data is None:
+        return new_data
+
+    for data_type in ["time_series", "regression"]:
+        for split in ["train", "valid"]:
+            combined_data[data_type][split]["x"] = np.concatenate(
+                [combined_data[data_type][split]["x"], new_data[data_type][split]["x"]], axis=0
+            )
+            combined_data[data_type][split]["y"] = np.concatenate(
+                [combined_data[data_type][split]["y"], new_data[data_type][split]["y"]], axis=0
+            )
+        if "test" in new_data[data_type]:
+            combined_data[data_type]["test"]["x"] = np.concatenate(
+                [combined_data[data_type]["test"]["x"], new_data[data_type]["test"]["x"]], axis=0
+            )
+            combined_data[data_type]["test"]["y"] = np.concatenate(
+                [combined_data[data_type]["test"]["y"], new_data[data_type]["test"]["y"]], axis=0
+            )
+
+    return combined_data
+
 def load_data(
     train_file_path: Union[str, Path],
     test_file_path: Union[str, Path, None] = None,
@@ -135,45 +162,27 @@ def get_dataset(
     test_folder: Union[Path, str, None] = None,
     look_back_steps: int = 12,
     n_valid_months: int = 2,
-    combine_data: bool = True,
+    combine: bool = True,
     ) -> List[Dict[str, Union[str, Dict[str, Dict[str, np.ndarray]]]]]:
     """get_dataset"""
-
-    if not isinstance(train_folder, Path):
-        train_folder = Path(train_folder)
-
-    if not isinstance(test_folder, Path):
-        test_folder = Path(test_folder)
 
     dataset = []
     combined_data = None
 
-    for train_file, test_file in zip(train_folder.glob("*.csv"), test_folder.glob("*.csv")):
+    train_folder = Path(train_folder) if not isinstance(train_folder, Path) else train_folder
+
+    if test_folder is not None :
+        test_folder = Path(test_folder) if not isinstance(test_folder, Path) else test_folder
+        files = zip(train_folder.glob("*.csv"), test_folder.glob("*.csv"))
+    else:
+        files = [(train_file, None) for train_file in train_folder.glob("*.csv")]
+
+    for train_file, test_file in files:
         data = load_data(train_file, test_file, look_back_steps, n_valid_months)
 
-        if combine_data:
-            if combined_data is None:
-                combined_data = data
-            else:
-                for data_type in ["time_series", "regression"]:
-                    for split in ["train", "valid"]:
-                        combined_data[data_type][split]["x"] = np.concatenate(
-                            [combined_data[data_type][split]["x"],
-                            data[data_type][split]["x"]], axis=0
-                        )
-                        combined_data[data_type][split]["y"] = np.concatenate(
-                            [combined_data[data_type][split]["y"],
-                            data[data_type][split]["y"]], axis=0
-                        )
-                    if "test" in data[data_type]:
-                        combined_data[data_type]["test"]["x"] = np.concatenate(
-                            [combined_data[data_type]["test"]["x"],
-                            data[data_type]["test"]["x"]], axis=0
-                        )
-                        combined_data[data_type]["test"]["y"] = np.concatenate(
-                            [combined_data[data_type]["test"]["y"],
-                            data[data_type]["test"]["y"]], axis=0
-                        )
+        if combine:
+            combined_data = combine_location_data(combined_data, data)
+
         else:
             dataset.append({
                 "file_name": train_file.name,
@@ -181,7 +190,7 @@ def get_dataset(
                 "regression": data["regression"]
             })
 
-    if combine_data:
+    if combined_data:
         dataset.append({
             "file_name": "Combined Data",
             "time_series": combined_data["time_series"],

@@ -24,7 +24,7 @@ def parse_arguments() -> Dict:
         help="Path to the folder containing CSV files for data for test data (optional)"
     )
     parser.add_argument(
-        "--combine_data", 
+        "--combine", 
         action="store_true",
         help="Combine all CSV files in the folder and train a single model"
     )
