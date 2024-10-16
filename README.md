@@ -12,9 +12,9 @@
 This project focuses on predicting solar photovoltaic (PV) power generation based on regional microclimate data. The objective is to forecast the power output of PV devices installed in various terrains using environmental data such as temperature, humidity, wind speed, solar radiation, and rainfall.
 
 ## 📝 To Do List
-- [ ] Understand the【微氣候數據處理】program in the SampleCode.
+- [ ] Discuss data partitioning schemes for testing our method
     > Daniel
-- [ ] Search for available external data (e.g.,氣象局資料)
+- [ ] Develop a function to integrate external data into our dataset
     > Benson
 - [ ] Rewrite the entire pipeline to comply with the competition format
     > Ken
@@ -46,20 +46,20 @@ To run the script for the PV power generation forecast, follow the usage command
 
 ```bash
 python main.py \
-    --data_folder ./data/TrainData \
+    --train_folder ./data/TrainData \
     --look_back_steps 12 \
     --n_valid_months 2 \
     --random_state 42 \
-    --combine_data
+    --combine
 ```
 
 | Argument          | Type   | Default    | Description                                                                                    |
 | ----------------- | ------ | ---------- | ---------------------------------------------------------------------------------------------- |
 | `train_folder`    | `Path` | `Required` | Path to the folder containing CSV files for training data.                                     |
 | `test_folder`     | `Path` | `None`     | Path to the folder containing CSV files for testing data (optional).                           |
-| `combine`         | `bool` | `False`    | If set, combines all CSV files in the folder and trains a single model with the combined data. |
-| `random_state`    | `int`  | `42`       | Integer used to ensure reproducibility of results by fixing the random seed.                   |
-| `n_valid_months`  | `int`  | `2`        | Number of most recent months to use as the validation set.                                     |
 | `look_back_steps` | `int`  | `12`       | Number of time steps (lags) to look back for preparing the time series data for model input.   |
+| `n_valid_months`  | `int`  | `2`        | Number of most recent months to use as the validation set.                                     |
+| `random_state`    | `int`  | `42`       | Integer used to ensure reproducibility of results by fixing the random seed.                   |
+| `combine`         | `bool` | `False`    | If set, combines all CSV files in the folder and trains a single model with the combined data. |
 
 ## 📈 Results
