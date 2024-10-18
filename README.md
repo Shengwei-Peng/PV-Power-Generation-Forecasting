@@ -37,9 +37,74 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
     ```
 
 ## 📊 Dataset
-- Observe the outlier of Data 1-17
-- Verify the data completeness.
-- Divide the data into training and validation datasets.
+### 1. Folder Structure
+The dataset consists of multiple CSV files stored in a folder, with each file representing data from a specific location. Each location is identified by a unique **LocationCode**.
+
+```
+TrainingData/
+├── L1_Train.csv
+├── L2_Train.csv
+├── L3_Train.csv
+├── L4_Train.csv
+├── ...
+└── L17_Train.csv
+```
+
+### 2. Raw Data
+Each CSV file contains the following columns:
+
+| **Column Name**   | **Description**                             |
+| ----------------- | ------------------------------------------- |
+| `WindSpeed(m/s)`  | Wind speed measured in meters per second    |
+| `Pressure(hpa)`   | Atmospheric pressure in hectopascals        |
+| `Temperature(°C)` | Temperature measured in degrees Celsius     |
+| `Humidity(%)`     | Humidity level as a percentage              |
+| `Sunlight(Lux)`   | Sunlight intensity measured in Lux          |
+| `Power(mW)`       | **Target:** Power output in milliwatts (mW) |
+
+### 3. Processed Data
+Once the raw data is processed, it is returned as a list of dictionaries. Each dictionary corresponds to either a specific CSV file or the combined data from all files, depending on the `combine` setting:
+
+- **True:** The list contains only one element.
+- **False:** The length of the list equals the number of CSV files in the folder (i.e., one dictionary per file).
+
+```python
+[
+    {
+        "file_name": "<csv_file_name_or_combined>",
+        "time_series": {
+            "train": {
+                "x": np.array((n_samples, seq_length, n_features), dtype=np.float32),
+                "y": np.array((n_samples, n_features), dtype=np.float32)
+            },
+            "valid": {
+                "x": np.array((n_samples, seq_length, n_features), dtype=np.float32),
+                "y": np.array((n_samples, n_features), dtype=np.float32)
+            },
+            // Optional
+            "test": {
+                "x": np.array((n_samples, seq_length, n_features), dtype=np.float32),
+                "y": np.array((n_samples, n_features), dtype=np.float32)
+            } 
+        },
+        "regression": {
+            "train": {
+                "x": np.array((n_samples, n_features), dtype=np.float32),
+                "y": np.array((n_samples, 1), dtype=np.float32)
+            },
+            "valid": {
+                "x": np.array((n_samples, n_features), dtype=np.float32),
+                "y": np.array((n_samples, 1), dtype=np.float32)
+            },
+            // Optional
+            "test": {
+                "x": np.array((n_samples, n_features), dtype=np.float32),
+                "y": np.array((n_samples, 1), dtype=np.float32)
+            } 
+        }
+    }
+]
+```
 
 ## 🚀 Usage
 To run the script for the PV power generation forecast, follow the usage command below. This assumes you have organized your datasets correctly in the specified folder.
