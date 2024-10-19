@@ -1,4 +1,6 @@
 """models"""
+import math
+
 from tqdm import tqdm
 import numpy as np
 import torch
@@ -73,9 +75,17 @@ class Model:
 
     def _build_model(self, x: np.ndarray) -> None:
         if self.model_type == "MLP":
-            self.model = MLP(x.shape[1], 1024, 1)
+            self.model = MLP(
+                input_size=x.shape[1], hidden_size=1024, output_size=1, num_layers=2
+            )
         elif self.model_type == "LSTM":
-            self.model = LSTM(x.shape[2], 1024, 5)
+            self.model = LSTM(
+                input_size=x.shape[2], hidden_size=1024, output_size=x.shape[2], num_layers=2
+            )
+        elif self.model_type == "Transformer":
+            self.model = Transformer(
+                input_size=x.shape[2], hidden_size=1024, output_size=x.shape[2], num_layers=2
+            )
         self.model = self.model.to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         self.model.train()
@@ -83,37 +93,76 @@ class Model:
 
 class MLP(nn.Module):
     """MLP"""
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+    def __init__(self, input_size: int, hidden_size: int, output_size: int, num_layers: int):
         super().__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.relu1 = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.relu2 = nn.ReLU()
-        self.fc3 = nn.Linear(hidden_dim, output_dim)
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(input_size, hidden_size))
+        self.layers.append(nn.ReLU())
 
-    def forward(self, x):
+        for _ in range(num_layers - 1):
+            self.layers.append(nn.Linear(hidden_size, hidden_size))
+            self.layers.append(nn.ReLU())
+
+        self.layers.append(nn.Linear(hidden_size, output_size))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """forward"""
-        x = self.fc1(x)
-        x = self.relu1(x)
-        x = self.fc2(x)
-        x = self.relu2(x)
-        x = self.fc3(x)
+        for layer in self.layers:
+            x = layer(x)
         return x
 
 
 class LSTM(nn.Module):
     """LSTM"""
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+    def __init__(self, input_size: int, hidden_size: int, output_size: int, num_layers: int):
         super().__init__()
-        self.lstm1 = nn.LSTM(input_dim, hidden_dim, num_layers=1, batch_first=True)
-        self.lstm2 = nn.LSTM(hidden_dim, hidden_dim, num_layers=1, batch_first=True)
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=num_layers, batch_first=True)
         self.dropout = nn.Dropout(0.2)
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """forward"""
-        x, _ = self.lstm1(x)
-        x, _ = self.lstm2(x)
+        x, _ = self.lstm(x)
         x = self.dropout(x[:, -1, :])
         x = self.fc(x)
         return x
+
+
+
+class Transformer(nn.Module):
+    """Transformer"""
+    def __init__(self, input_size: int, hidden_size: int, output_size: int, num_layers: int):
+        super().__init__()
+        self.embedding = nn.Linear(input_size, hidden_size)
+        self.pos_encoder = PositionalEncoding(hidden_size)
+        encoder_layers = nn.TransformerEncoderLayer(d_model=hidden_size, nhead=1)
+        self.transformer = nn.TransformerEncoder(encoder_layers, num_layers)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """forward"""
+        x = self.embedding(x)
+        x = self.pos_encoder(x)
+        x = self.transformer(x)
+        x = self.fc(x[:, -1, :])
+        return x
+
+
+class PositionalEncoding(nn.Module):
+    """PositionalEncoding"""
+    def __init__(self, d_model: int, max_len: int = 5000):
+        super().__init__()
+        self.dropout = nn.Dropout(0.1)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """forward"""
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
