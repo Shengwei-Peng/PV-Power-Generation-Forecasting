@@ -182,10 +182,10 @@ def get_dataset(
     dataset = []
     combined_data = None
 
-    train_folder = Path(train_folder) if not isinstance(train_folder, Path) else train_folder
+    train_folder = check_folder(train_folder)
 
     if test_folder is not None :
-        test_folder = Path(test_folder) if not isinstance(test_folder, Path) else test_folder
+        test_folder = check_folder(test_folder)
         files = zip(train_folder.glob("*.csv"), test_folder.glob("*.csv"))
     else:
         files = [(train_file, None) for train_file in train_folder.glob("*.csv")]
@@ -245,3 +245,15 @@ def show_data_shapes(data: dict) -> None:
 
     print("\nData Shapes:")
     print(tabulate(data_shapes, headers=headers, tablefmt="rounded_grid"))
+
+def check_folder(folder: Union[Path, str]) -> Path:
+    """check_folder"""
+    folder = Path(folder) if not isinstance(folder, Path) else folder
+
+    if not folder.exists():
+        raise FileNotFoundError(f"Folder does not exist: {folder}")
+
+    if not any(folder.glob("*.csv")):
+        raise FileNotFoundError(f"No CSV files found in folder: {folder}")
+
+    return folder
