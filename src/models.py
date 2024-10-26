@@ -16,11 +16,15 @@ class Model:
         lr: float = 0.001,
         epochs: int = 100,
         batch_size: int = 128,
+        hidden_size: int = 64,
+        num_layers: int = 2,
     ) -> None:
         self.model_type = model_type
         self.lr = lr
         self.epochs = epochs
         self.batch_size = batch_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
         self.model = None
         self.optimizer = None
         self.criterion = nn.MSELoss()
@@ -76,15 +80,15 @@ class Model:
     def _build_model(self, x: np.ndarray) -> None:
         if self.model_type == "MLP":
             self.model = MLP(
-                input_size=x.shape[1], hidden_size=1024, output_size=1, num_layers=2
+                x.shape[1], self.hidden_size, 1, num_layers=self.num_layers
             )
         elif self.model_type == "LSTM":
             self.model = LSTM(
-                input_size=x.shape[2], hidden_size=1024, output_size=x.shape[2], num_layers=2
+                x.shape[2], self.hidden_size, x.shape[2], num_layers=self.num_layers
             )
         elif self.model_type == "Transformer":
             self.model = Transformer(
-                input_size=x.shape[2], hidden_size=1024, output_size=x.shape[2], num_layers=2
+                x.shape[2], self.hidden_size, x.shape[2], num_layers=self.num_layers
             )
         self.model = self.model.to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
