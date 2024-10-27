@@ -2,10 +2,12 @@
 from pathlib import Path
 from typing import Dict, Any
 
+import joblib
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from tabulate import tabulate
+from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from .dataset import get_dataset
 from .utils import set_seed
@@ -39,6 +41,23 @@ class Trainer:
             self._find_best_model(model_type)
             for model_type in self.models
         ])
+
+    def save(self, save_dir: Path | str) -> None:
+        """save"""
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        for model_type, model in self.best_models.items():
+            model_name = f"{model_type}_best_model"
+            save_path = save_dir / model_name
+
+            if isinstance(model, BaseEstimator):
+                joblib.dump(model, save_path.with_suffix(".joblib"))
+                print(f"Saved sklearn model: {model_name}.joblib")
+
+            else:
+                model.save(save_path.with_suffix(".pt"))
+                print(f"Saved PyTorch model: {model_name}.pt")
 
     def _find_best_model(
         self,
