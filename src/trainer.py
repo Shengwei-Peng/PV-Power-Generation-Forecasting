@@ -1,6 +1,6 @@
 """trainer"""
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Union
 
 import joblib
 import numpy as np
@@ -9,40 +9,56 @@ from tqdm import tqdm
 from tabulate import tabulate
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from .dataset import get_dataset
 from .utils import set_seed
-
+from .dataset import Dataset
 
 class Trainer:
     """Trainer"""
     def __init__(
         self,
+        dataset: Dataset,
         models: Dict,
-        train_file: Path,
-        test_file: Path = None,
-        look_back_steps: int = 12,
-        scaler_type: str = "minmax",
         random_state: int = 42,
     ) -> None:
         set_seed(random_state)
-        self.look_back_steps = look_back_steps
-        self.dataset = get_dataset(
-            train_file=train_file,
-            test_file=test_file,
-            look_back_steps=look_back_steps,
-            scaler_type=scaler_type
-        )
+        self.dataset = dataset
         self.models = models
         self.best_models = {}
 
     def train(self) -> pd.DataFrame:
         """train"""
-        return pd.DataFrame([
-            self._find_best_model(model_type)
-            for model_type in self.models
-        ])
+        all_results = []
+        for model_type in self.models:
+            best_info = {"model": None, "name": "", "metrics": {"MAE": float("inf")}}
+            results = []
+            train_data = self.dataset[model_type]["train"]
 
-    def save(self, save_dir: Path | str) -> None:
+            with tqdm(self.models[model_type].items()) as pbar:
+                for name, model in pbar:
+                    pbar.set_description(f"Training {name} ({model_type})")
+
+                    model.fit(train_data["x"], train_data["y"])
+                    y_pred = model.predict(train_data["x"])
+                    y_true = train_data["y"]
+
+                    metrics = self._calculate_metrics(y_true, y_pred)
+                    results.append({"Model": name, **metrics})
+
+                    if metrics["MAE"] < best_info["metrics"]["MAE"]:
+                        best_info = {"model": model, "name": name, "metrics": metrics}
+
+            results_df = pd.DataFrame(results).sort_values(by="MAE")
+            print(f"\nModel Performance ({model_type}): ")
+            print(tabulate(results_df, headers="keys", tablefmt="rounded_grid", showindex=False))
+
+            self.best_models[model_type] = best_info["model"]
+            all_results.append(
+                {"Type": model_type, "Best Model": best_info["name"], **best_info["metrics"]}
+            )
+
+        return pd.DataFrame(all_results)
+
+    def save(self, save_dir: Union[Path, str]) -> None:
         """save"""
         save_dir = Path(save_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -58,53 +74,6 @@ class Trainer:
             else:
                 model.save(save_path.with_suffix(".pt"))
                 print(f"Saved PyTorch model: {model_name}.pt")
-
-    def _find_best_model(
-        self,
-        model_type: str,
-    ) -> Dict[str, Any]:
-        best_info = {
-            "model": None,
-            "name": "",
-            "metrics": {"MAE": float("inf")}
-        }
-        results = []
-
-        with tqdm(self.models[model_type].items(), desc=f"Training {model_type} Models") as pbar:
-            for name, model in pbar:
-                pbar.set_description(f"Training {name} ({model_type})")
-
-                model.fit(
-                    self.dataset[model_type]["train"]["x"], self.dataset[model_type]["train"]["y"]
-                )
-                y_pred = model.predict(self.dataset[model_type]["train"]["x"])
-                y_true = self.dataset[model_type]["train"]["y"]
-
-                metrics = self._calculate_metrics(y_true, y_pred)
-                results.append({"Model": name, **metrics})
-
-                if metrics["MAE"] < best_info["metrics"]["MAE"]:
-                    best_info.update({
-                        "model": model,
-                        "name": name,
-                        "metrics": metrics,
-                    })
-
-        results_df = pd.DataFrame(results).sort_values(by="MAE", ascending=True)
-
-        print(f"\nModel Performance ({model_type}): ")
-        print(tabulate(results_df, headers="keys", tablefmt="rounded_grid", showindex=False))
-
-        self.best_models[model_type] = best_info["model"]
-
-        return {
-            "Model Type": model_type,
-            "Best Model": best_info["name"],
-            "MAE": best_info["metrics"]["MAE"],
-            "MSE": best_info["metrics"]["MSE"],
-            "RMSE": best_info["metrics"]["RMSE"],
-            "R² Score": best_info["metrics"]["R² Score"]
-        }
 
     def _calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
         return {
