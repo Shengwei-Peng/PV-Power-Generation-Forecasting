@@ -7,14 +7,6 @@ import pandas as pd
 from tqdm import tqdm
 from tabulate import tabulate
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.linear_model import LinearRegression
-from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
-from catboost import CatBoostRegressor
-from ngboost import NGBRegressor
-from pytorch_tabnet.tab_model import TabNetRegressor
-
-from .models import Model
 from .dataset import get_dataset
 from .utils import set_seed
 
@@ -23,6 +15,7 @@ class Trainer:
     """Trainer"""
     def __init__(
         self,
+        models: Dict,
         train_file: Path,
         test_file: Path = None,
         look_back_steps: int = 12,
@@ -37,35 +30,14 @@ class Trainer:
             look_back_steps=look_back_steps,
             scaler_type=scaler_type
         )
-        self.models = {
-            "regression":{
-                "Linear Regression": LinearRegression(),
-                "XGBoost": XGBRegressor(
-                    n_jobs=-1, random_state=random_state
-                ),
-                "LightGBM": LGBMRegressor(
-                    verbose=-1, n_jobs=-1, random_state=random_state
-                ),
-                "CatBoost": CatBoostRegressor(
-                    verbose=0, thread_count=-1, random_state=random_state
-                ),
-                "NGBoost": NGBRegressor(
-                    verbose=False, random_state=random_state
-                ),
-                "TabNet": TabNetRegressor(),
-                "MLP": Model("MLP"),
-            },
-            "time_series":{
-                "LSTM": Model("LSTM", epochs=1),
-            },
-        }
-        self.best_models = {"regression": None, "time_series": None}
+        self.models = models
+        self.best_models = {}
 
     def train(self) -> pd.DataFrame:
         """train"""
         return pd.DataFrame([
             self._find_best_model(model_type)
-            for model_type in ["regression", "time_series"]
+            for model_type in self.models
         ])
 
     def _find_best_model(
