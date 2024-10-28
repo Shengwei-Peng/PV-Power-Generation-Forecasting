@@ -1,75 +1,35 @@
 """dataset"""
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Union
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-
-from .utils import validate_csv
+from sklearn.preprocessing import MinMaxScaler
 
 
 class Dataset:
     """Dataset"""
-    def __init__(
-        self,
-        train_file: Union[Path, str],
-        test_file: Union[Path, str, None] = None,
-        x_columns: List[str] = None,
-        y_column: List[str] = None,
-        look_back_steps: int = 12,
-        scaler_type: str = "minmax",
-    ) -> None:
-        self.look_back_steps = look_back_steps
-        self.scaler = MinMaxScaler() if scaler_type == "minmax" else StandardScaler()
-        self.x_columns = x_columns or [
-            "WindSpeed(m/s)", "Pressure(hpa)", "Temperature(°C)", "Humidity(%)", "Sunlight(Lux)"
-        ]
-        self.y_column = y_column or ["Power(mW)"]
-        self.dataset = self._load_and_process(train_file, test_file)
+    def __init__(self, file_path: Union[Path, str]) -> None:
+        self.dataset = self.pre_process(pd.read_csv(file_path))
 
-    def _load_and_process(self, train_file: Union[Path, str], test_file: Union[Path, str, None]):
-        """_load_and_process"""
-        train_data = pd.read_csv(validate_csv(train_file))
-        train_processed = self._pre_process(
-            train_data[self.x_columns].values, train_data[self.y_column].values, fit_scaler=True
-        )
+    def pre_process(self, data: pd.DataFrame) -> Dict[str, Dict[str, np.ndarray]]:
+        """pre_process"""
+        x = data[
+            ["WindSpeed(m/s)", "Pressure(hpa)", "Temperature(°C)", "Humidity(%)", "Sunlight(Lux)"]
+        ].values
+        y = data[["Power(mW)"]].values
 
-        if test_file:
-            test_data = pd.read_csv(validate_csv(test_file))
-            test_processed = self._pre_process(
-                test_data[self.x_columns].values, test_data[self.y_column].values
-            )
-            return {
-                "regression": {
-                    "train": {"x": train_processed["x"], "y": train_processed["y"]},
-                    "test": {"x": test_processed["x"], "y": test_processed["y"]}
-                },
-                "time_series": {
-                    "train": {"x": train_processed["x_ts"], "y": train_processed["y_ts"]}, 
-                    "test": {"x": test_processed["x_ts"], "y": test_processed["y_ts"]}
-                }
-            }
+        scaler = MinMaxScaler()
+        x = scaler.fit_transform(x)
+
+        x_ts = sliding_window_view(x, window_shape=(12, x.shape[1]))[:-1, 0, :, :]
+        y_ts = x[12:, :]
 
         return {
-            "regression": {"train": {"x": train_processed["x"], "y": train_processed["y"]}},
-            "time_series": {"train": {"x": train_processed["x_ts"], "y": train_processed["y_ts"]}}
+            "regression": {"x": x, "y": y},
+            "time_series": {"x": x_ts, "y": y_ts}
         }
-
-    def _pre_process(
-        self, x: np.ndarray, y: np.ndarray, fit_scaler: bool = False
-    ) -> Dict[str, np.ndarray]:
-        """_pre_process"""
-        x = self.scaler.fit_transform(x) if fit_scaler else self.scaler.transform(x)
-        x_ts, y_ts = self._create_time_series_data(x)
-        return {"x": x, "y": y, "x_ts": x_ts, "y_ts": y_ts}
-
-    def _create_time_series_data(self, features: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """_create_time_series_data"""
-        x = sliding_window_view(features, (self.look_back_steps, features.shape[1]))[:-1, 0, :, :]
-        y = features[self.look_back_steps:, :]
-        return x, y
 
     def __str__(self) -> str:
         def format_structure(data, indent=1):

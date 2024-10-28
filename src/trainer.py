@@ -31,15 +31,15 @@ class Trainer:
         for model_type in self.models:
             best_info = {"model": None, "name": "", "metrics": {"MAE": float("inf")}}
             results = []
-            train_data = self.dataset[model_type]["train"]
+            data = self.dataset[model_type]
 
             with tqdm(self.models[model_type].items()) as pbar:
                 for name, model in pbar:
                     pbar.set_description(f"Training {name} ({model_type})")
 
-                    model.fit(train_data["x"], train_data["y"])
-                    y_pred = model.predict(train_data["x"])
-                    y_true = train_data["y"]
+                    model.fit(data["x"], data["y"])
+                    y_pred = model.predict(data["x"])
+                    y_true = data["y"]
 
                     metrics = self._calculate_metrics(y_true, y_pred)
                     results.append({"Model": name, **metrics})
