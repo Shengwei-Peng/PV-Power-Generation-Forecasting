@@ -5,47 +5,37 @@ from typing import Dict, Union
 import joblib
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from tabulate import tabulate
 from sklearn.base import BaseEstimator
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from .utils import set_seed
-from .dataset import Dataset
+
+from .utils import set_seed, calculate_metrics
+
 
 class Trainer:
     """Trainer"""
-    def __init__(
-        self,
-        dataset: Dataset,
-        models: Dict,
-        random_state: int = 42,
-    ) -> None:
+    def __init__(self, models: Dict, random_state: int = 42) -> None:
         set_seed(random_state)
-        self.dataset = dataset
         self.models = models
         self.best_models = {}
 
-    def train(self) -> pd.DataFrame:
+    def train(self, dataset) -> pd.DataFrame:
         """train"""
         all_results = []
         for model_type in self.models:
             best_info = {"model": None, "name": "", "metrics": {"MAE": float("inf")}}
             results = []
-            data = self.dataset[model_type]
+            data = dataset[model_type]
 
-            with tqdm(self.models[model_type].items()) as pbar:
-                for name, model in pbar:
-                    pbar.set_description(f"Training {name} ({model_type})")
+            for name, model in self.models[model_type].items():
+                model.fit(data["x"], data["y"])
+                y_pred = model.predict(data["x"])
+                y_true = data["y"]
 
-                    model.fit(data["x"], data["y"])
-                    y_pred = model.predict(data["x"])
-                    y_true = data["y"]
+                metrics = calculate_metrics(y_true, y_pred)
+                results.append({"Model": name, **metrics})
 
-                    metrics = self._calculate_metrics(y_true, y_pred)
-                    results.append({"Model": name, **metrics})
-
-                    if metrics["MAE"] < best_info["metrics"]["MAE"]:
-                        best_info = {"model": model, "name": name, "metrics": metrics}
+                if metrics["MAE"] < best_info["metrics"]["MAE"]:
+                    best_info = {"model": model, "name": name, "metrics": metrics}
 
             results_df = pd.DataFrame(results).sort_values(by="MAE")
             print(f"\nModel Performance ({model_type}): ")
@@ -75,10 +65,27 @@ class Trainer:
                 model.save(save_path.with_suffix(".pt"))
                 print(f"Saved PyTorch model: {model_name}.pt")
 
-    def _calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
-        return {
-            "MAE": mean_absolute_error(y_true, y_pred),
-            "MSE": mean_squared_error(y_true, y_pred),
-            "RMSE": np.sqrt(mean_squared_error(y_true, y_pred)),
-            "R² Score": r2_score(y_true, y_pred),
-        }
+    def predict(self, dataset: Dict[str, Dict[str, np.ndarray]], steps: int = 48) -> pd.DataFrame:
+        """predict"""
+        prediction_ids, predictions = [], []
+
+        for i, sequence_id in enumerate(dataset["序號"]):
+            series = dataset["x"][i:i+1].copy()
+            initial_time = pd.to_datetime(str(sequence_id)[:12], format="%Y%m%d%H%M")
+
+            for step in range(steps):
+                pred = self.best_models["time_series"].predict(series)[0]
+                series = np.roll(series, shift=-1, axis=1)
+                series[0, -1] = pred
+                predictions.append(pred)
+
+                prediction_ids.append(
+                    (initial_time + pd.Timedelta(minutes=10 * step)).strftime("%Y%m%d%H%M")
+                    + str(sequence_id)[12:]
+                )
+
+        final_preds = [
+            round(float(pred), 2)
+            for pred in self.best_models["regression"].predict(np.array(predictions))
+        ]
+        return pd.DataFrame({"序號": prediction_ids, "答案": final_preds})

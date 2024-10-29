@@ -14,7 +14,7 @@ class Model:
         self,
         model_type: str,
         lr: float = 0.001,
-        epochs: int = 100,
+        epochs: int = 1,
         batch_size: int = 128,
         hidden_size: int = 64,
         num_layers: int = 2,
@@ -40,21 +40,13 @@ class Model:
         dataset = torch.utils.data.TensorDataset(train_x_tensor, train_y_tensor)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
-        with tqdm(
-            range(self.epochs), unit="epoch", desc=f"Training {self.model_type}"
-            ) as epoch_progress:
-            for _ in epoch_progress:
-                running_loss = 0.0
-                for batch_x, batch_y in dataloader:
-                    self.optimizer.zero_grad()
-                    outputs = self.model(batch_x)
-                    loss = self.criterion(outputs, batch_y)
-                    loss.backward()
-                    self.optimizer.step()
-                    running_loss += loss.item()
-
-                avg_loss = running_loss / len(dataloader)
-                epoch_progress.set_postfix(epoch_loss=avg_loss)
+        for _ in tqdm(range(self.epochs), unit="epoch", desc=f"Training {self.model_type}"):
+            for batch_x, batch_y in dataloader:
+                self.optimizer.zero_grad()
+                outputs = self.model(batch_x)
+                loss = self.criterion(outputs, batch_y)
+                loss.backward()
+                self.optimizer.step()
 
     def predict(self, test_x: np.ndarray) -> np.ndarray:
         """predict""" 
@@ -130,7 +122,6 @@ class LSTM(nn.Module):
         x = self.dropout(x[:, -1, :])
         x = self.fc(x)
         return x
-
 
 
 class Transformer(nn.Module):
