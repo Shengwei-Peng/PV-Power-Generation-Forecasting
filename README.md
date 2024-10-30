@@ -4,7 +4,6 @@
 - [Overview](#Overview)
 - [Installation](#Installation)
 - [Dataset](#Dataset)
-- [Usage](#Usage)
 - [Results](#Results)
 
 ## 🌞 Overview
@@ -39,36 +38,8 @@ The raw data CSV file contains the following columns:
 | `Sunlight(Lux)`       | Sunlight intensity in Lux                        | Float         |
 | `Power(mW)`           | **Target:** Power output in mW                   | Float         |
 
-### Processed Data
-Once the raw data is processed, it is returned as a dictionaries:
-
-```python
-{
-    "time_series": {
-        "train": {
-            "x": np.array((n_samples, seq_length, n_features), dtype=np.float32),
-            "y": np.array((n_samples, n_features), dtype=np.float32)
-        },
-        # Optional
-        "test": {
-            "x": np.array((n_samples, seq_length, n_features), dtype=np.float32),
-            "y": np.array((n_samples, n_features), dtype=np.float32)
-        } 
-    },
-    "regression": {
-        "train": {
-            "x": np.array((n_samples, n_features), dtype=np.float32),
-            "y": np.array((n_samples, 1), dtype=np.float32)
-        },
-        # Optional
-        "test": {
-            "x": np.array((n_samples, n_features), dtype=np.float32),
-            "y": np.array((n_samples, 1), dtype=np.float32)
-        } 
-    }
-}
-```
-
-## 🚀 Usage
-
 ## 📈 Results
+
+| Time  | Submitter | MAE     | MSE    | RMSE    | R² Score   |
+| ----- | --------- | ------- | ------ | ------- | ---------- |
+| 10/30 | Ken       | 403.523 | 302237 | 549.761 |    0.23937 |
