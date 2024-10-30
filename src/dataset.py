@@ -115,3 +115,35 @@ def parse_target(target: pd.DataFrame) -> pd.DataFrame:
     target = target.drop_duplicates(subset=["Date", "LocationCode"])
 
     return target[["序號", "Datetime", "LocationCode"]]
+
+def generate_full_data(data, start_time="09:00", end_time="17:00"):
+    """generate_full_data"""
+    data["DateTime"] = pd.to_datetime(data["DateTime"]).dt.floor("min")
+    filled_data = pd.DataFrame()
+
+    for location, group in data.groupby("LocationCode"):
+        group["Date"] = group["DateTime"].dt.date
+        dates_with_data = group[
+            (group["DateTime"].dt.time >= pd.to_datetime(start_time).time()) &
+            (group["DateTime"].dt.time <= pd.to_datetime(end_time).time())
+        ]["Date"].unique()
+
+        daily_ranges = [
+            pd.date_range(f"{date} {start_time}", f"{date} {end_time}", freq="min")
+            for date in dates_with_data
+        ]
+
+        full_time_index = pd.DatetimeIndex([time for day in daily_ranges for time in day])
+
+        group_filled = (
+            group.drop_duplicates(subset=["DateTime"])
+            .set_index("DateTime")
+            .reindex(full_time_index)
+            .assign(LocationCode=location)
+            .reset_index()
+            .rename(columns={"index": "DateTime"})
+        )
+
+        filled_data = pd.concat([filled_data, group_filled], ignore_index=True)
+
+    return filled_data
