@@ -146,4 +146,4 @@ def generate_full_data(data, start_time="09:00", end_time="17:00"):
 
         filled_data = pd.concat([filled_data, group_filled], ignore_index=True)
 
-    return filled_data
+    return filled_data[data.columns]
