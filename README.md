@@ -43,3 +43,4 @@ The raw data CSV file contains the following columns:
 | Time  | Submitter | MAE     | MSE    | RMSE    | R² Score   |
 | ----- | --------- | ------- | ------ | ------- | ---------- |
 | 10/30 | Ken       | 403.523 | 302237 | 549.761 |    0.23937 |
+| 11/04 | Daniel    | 759.586 | 845315 | 919.41  |   -1.06507 |
