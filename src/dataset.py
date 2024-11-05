@@ -67,7 +67,9 @@ class Dataset:
             return repr(self.data)
 
 
-def resample_data_by_10min(data: pd.DataFrame) -> pd.DataFrame:
+def resample_data_by_10min(
+    data: pd.DataFrame, start_time: str="09:00", end_time: str="16:59"
+) -> pd.DataFrame:
     """resample_data_by_10min"""
     data["DateTime"] = pd.to_datetime(data["DateTime"])
     data.set_index("DateTime", inplace=True)
@@ -79,14 +81,20 @@ def resample_data_by_10min(data: pd.DataFrame) -> pd.DataFrame:
         .drop(columns="LocationCode")
         .reset_index()
     )
+    mask = resampled_data["DateTime"].dt.time.between(
+        pd.to_datetime(start_time).time(), pd.to_datetime(end_time).time()
+    )
 
-    return resampled_data
+    return resampled_data.loc[mask].reset_index(drop=True)
 
-def datetime_to_timestamp(data: pd.DataFrame) -> pd.DataFrame:
-    """datetime_to_timestamp"""
-    data["DateTime"] = pd.to_datetime(data["DateTime"], errors="coerce")
+def encode_datetime(data: pd.DataFrame) -> pd.DataFrame:
+    """encode_datetime"""
+    data["DateTime"] = pd.to_datetime(data["DateTime"])
     data["timestamp"] = data["DateTime"].astype("int64") // 10**9
-    data = data.drop(columns=["DateTime"])
+    data["month"] = data["DateTime"].dt.month
+    data["day"] = data["DateTime"].dt.day
+    data["hour"] = data["DateTime"].dt.hour
+    data["minute"] = data["DateTime"].dt.minute
     return data
 
 def create_time_series_data(x: np.ndarray, look_back_num: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -110,13 +118,11 @@ def parse_target(target: pd.DataFrame) -> pd.DataFrame:
         .agg("-".join, axis=1),
         format="%Y-%m-%d-%H-%M"
     )
-
-    target["Date"] = target["Datetime"].dt.date
-    target = target.drop_duplicates(subset=["Date", "LocationCode"])
-
     return target[["序號", "Datetime", "LocationCode"]]
 
-def generate_full_data(data, start_time="09:00", end_time="17:00"):
+def generate_full_data(
+    data: pd.DataFrame, start_time: str="09:00", end_time: str="16:59"
+) -> pd.DataFrame:
     """generate_full_data"""
     data["DateTime"] = pd.to_datetime(data["DateTime"]).dt.floor("min")
     filled_data = pd.DataFrame()
