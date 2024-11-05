@@ -153,3 +153,18 @@ def generate_full_data(
         filled_data = pd.concat([filled_data, group_filled], ignore_index=True)
 
     return filled_data[data.columns]
+
+def filter_nan_days(data: pd.DataFrame) -> pd.DataFrame:
+    """filter_nan_days"""
+    data["DateTime"] = pd.to_datetime(data["DateTime"])
+    data["Date"] = data["DateTime"].dt.date
+
+    filtered_data = pd.concat(
+        [
+            day_data for _, group in data.groupby("LocationCode")
+            for _, day_data in group.groupby("Date")
+            if not day_data.isna().any().any()
+        ]
+    ).reset_index(drop=True)
+
+    return filtered_data.drop(columns="Date")
