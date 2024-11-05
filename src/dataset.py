@@ -67,9 +67,7 @@ class Dataset:
             return repr(self.data)
 
 
-def resample_data_by_10min(
-    data: pd.DataFrame, start_time: str="09:00", end_time: str="16:59"
-) -> pd.DataFrame:
+def resample_data_by_10min(data: pd.DataFrame) -> pd.DataFrame:
     """resample_data_by_10min"""
     data["DateTime"] = pd.to_datetime(data["DateTime"])
     data.set_index("DateTime", inplace=True)
@@ -82,7 +80,7 @@ def resample_data_by_10min(
         .reset_index()
     )
     mask = resampled_data["DateTime"].dt.time.between(
-        pd.to_datetime(start_time).time(), pd.to_datetime(end_time).time()
+        data.index.min().time(), data.index.max().time()
     )
 
     return resampled_data.loc[mask].reset_index(drop=True)
@@ -168,3 +166,34 @@ def filter_nan_days(data: pd.DataFrame) -> pd.DataFrame:
     ).reset_index(drop=True)
 
     return filtered_data.drop(columns="Date")
+
+def create_samples(data: pd.DataFrame) -> tuple[np.array, np.array]:
+    """create_samples"""
+    data["DateTime"] = pd.to_datetime(data["DateTime"])
+    data.set_index("DateTime", inplace=True)
+
+    x_list, y_list = [], []
+
+    for _, group in data.groupby("LocationCode"):
+        dates = group.sort_index().index.date
+        for i in range(len(dates) - 1):
+            first_day_date = dates[i]
+            second_day_date = first_day_date + pd.DateOffset(days=1)
+
+            first_day = group.loc[group.index.date == first_day_date]
+            second_day = group.loc[group.index.date == second_day_date]
+
+            if not first_day.empty and not second_day.empty:
+                x_data = pd.concat([
+                    first_day,
+                    second_day[second_day.index.time < pd.to_datetime("09:00").time()]
+                ])
+                y_data = second_day[
+                    (second_day.index.time >= pd.to_datetime("09:00").time()) &
+                    (second_day.index.time <= pd.to_datetime("16:59").time())
+                ]["Power(mW)"]
+
+                x_list.append(x_data.to_numpy())
+                y_list.append(y_data.to_numpy())
+
+    return np.array(x_list), np.array(y_list)
