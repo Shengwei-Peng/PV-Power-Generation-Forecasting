@@ -31,8 +31,8 @@ def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float
         "R² Score": r2_score(y_true, y_pred),
     }
 
-def evaluate_predictions(target_file: str, prediction_file: str) -> None:
-    """evaluate_predictions"""
+def evaluate(target_file: str, prediction_file: str) -> None:
+    """evaluate"""
     target_data = pd.read_csv(target_file)
     prediction_data = pd.read_csv(prediction_file)
     merged_data = pd.merge(target_data, prediction_data, on="序號", suffixes=('_true', '_pred'))
