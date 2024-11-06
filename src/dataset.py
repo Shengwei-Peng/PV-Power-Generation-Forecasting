@@ -63,6 +63,20 @@ class Dataset:
                 return Dataset.DataProxy(value) if isinstance(value, dict) else value
             raise KeyError(f"Key '{key}' not found.")
 
+        def __iter__(self):
+            return iter(self.data)
+
+        def keys(self):
+            """keys"""
+            return self.data.keys()
+
+        def items(self):
+            """items"""
+            return self.data.items()
+
+        def __len__(self):
+            return len(self.data)
+
         def __repr__(self):
             return repr(self.data)
 
@@ -108,15 +122,12 @@ def parse_target(target: pd.DataFrame) -> pd.DataFrame:
     target["Day"] = target["序號"].astype(str).str[6:8]
     target["Hour"] = target["序號"].astype(str).str[8:10]
     target["Minute"] = target["序號"].astype(str).str[10:12]
-    target["LocationCode"] = target["序號"].astype(str).str[12:14]
-
-    target["Datetime"] = pd.to_datetime(
-        target[["Year", "Month", "Day", "Hour", "Minute"]]
-        .astype(str)
-        .agg("-".join, axis=1),
-        format="%Y-%m-%d-%H-%M"
+    target["LocationCode"] = target["序號"].astype(str).str[12:14].astype(int)
+    target["DateTime"] = pd.to_datetime(
+        target["序號"].astype(str).str[:12],
+        format="%Y%m%d%H%M"
     )
-    return target[["序號", "Datetime", "LocationCode"]]
+    return target[["序號", "DateTime", "LocationCode"]]
 
 def generate_full_data(
     data: pd.DataFrame, start_time: str="09:00", end_time: str="16:59"
@@ -167,33 +178,62 @@ def filter_nan_days(data: pd.DataFrame) -> pd.DataFrame:
 
     return filtered_data.drop(columns="Date")
 
-def create_samples(data: pd.DataFrame) -> tuple[np.array, np.array]:
+def create_samples(
+    data: pd.DataFrame, target: pd.DataFrame = None, flatten: bool = False
+) -> Dict[str, np.ndarray]:
     """create_samples"""
     data["DateTime"] = pd.to_datetime(data["DateTime"])
     data.set_index("DateTime", inplace=True)
+    data["Date"] = data.index.date
+    data["Time"] = data.index.time
+
+    start_time = pd.to_datetime("09:00").time()
+    end_time = pd.to_datetime("16:59").time()
 
     x_list, y_list = [], []
 
+    if target is not None:
+        target["Date"] = target["DateTime"].dt.date
+        for location, group in target.groupby("LocationCode"):
+            unique_dates = group["Date"].sort_values().unique()
+            for target_date in unique_dates:
+                previous_date = target_date - pd.DateOffset(days=1)
+                location_data = data.loc[data["LocationCode"] == location]
+                previous_day_data = location_data.loc[location_data["Date"] == previous_date.date()]
+                target_day_data = location_data.loc[
+                    (location_data["Date"] == target_date) & (location_data["Time"] < start_time)
+                ]
+
+                if not previous_day_data.empty and not target_day_data.empty:
+                    x_data = pd.concat([
+                        previous_day_data, target_day_data
+                    ])
+                    x_list.append(x_data.drop(columns=["Date", "Time"]))
+
+        x = np.array(x_list)
+        return {"X": x.reshape(x.shape[0], -1) if flatten else x}
+
     for _, group in data.groupby("LocationCode"):
-        dates = group.sort_index().index.date
-        for i in range(len(dates) - 1):
-            first_day_date = dates[i]
+        unique_dates = group["Date"].sort_values().unique()
+        for i in range(len(unique_dates) - 1):
+            first_day_date = unique_dates[i]
             second_day_date = first_day_date + pd.DateOffset(days=1)
 
-            first_day = group.loc[group.index.date == first_day_date]
-            second_day = group.loc[group.index.date == second_day_date]
+            first_day = group.loc[group["Date"] == first_day_date]
+            second_day = group.loc[group["Date"] == second_day_date.date()]
 
             if not first_day.empty and not second_day.empty:
                 x_data = pd.concat([
-                    first_day,
-                    second_day[second_day.index.time < pd.to_datetime("09:00").time()]
+                    first_day, second_day[second_day["Time"] < start_time]
                 ])
                 y_data = second_day[
-                    (second_day.index.time >= pd.to_datetime("09:00").time()) &
-                    (second_day.index.time <= pd.to_datetime("16:59").time())
+                    (second_day["Time"] >= start_time) & (second_day["Time"] <= end_time)
                 ]["Power(mW)"]
 
-                x_list.append(x_data.to_numpy())
-                y_list.append(y_data.to_numpy())
+                x_list.append(x_data.drop(columns=["Date", "Time"]))
+                y_list.append(y_data)
 
-    return np.array(x_list), np.array(y_list)
+    x = np.array(x_list)
+    y = np.array(y_list)
+
+    return {"X": x.reshape(x.shape[0], -1) if flatten else x, "y": y}
