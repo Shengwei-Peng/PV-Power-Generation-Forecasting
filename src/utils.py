@@ -43,3 +43,11 @@ def evaluate(target_file: str, prediction_file: str) -> None:
 
     metrics_table = tabulate([metrics.values()], headers=metrics.keys(), tablefmt="grid")
     print(metrics_table)
+
+def post_process(predictions: np.ndarray) -> np.ndarray:
+    """post_process"""
+    if predictions.ndim > 1:
+        predictions = predictions.ravel()
+    predictions = np.maximum(predictions, 0)
+    predictions = predictions.round(2)
+    return predictions

@@ -232,11 +232,3 @@ def create_samples(
         "X": x.reshape(x.shape[0], -1) if flatten else x, 
         "prev_y" if target is not None else "y": y
     }
-
-def post_process(predictions: np.ndarray) -> np.ndarray:
-    """post_process"""
-    if predictions.ndim > 1:
-        predictions = predictions.ravel()
-    predictions = np.maximum(predictions, 0)
-    predictions = predictions.round(2)
-    return predictions
