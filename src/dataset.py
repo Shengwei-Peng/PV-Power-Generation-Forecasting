@@ -179,61 +179,64 @@ def filter_nan_days(data: pd.DataFrame) -> pd.DataFrame:
     return filtered_data.drop(columns="Date")
 
 def create_samples(
-    data: pd.DataFrame, target: pd.DataFrame = None, flatten: bool = False
+    data: pd.DataFrame,
+    target: pd.DataFrame = None,
+    flatten: bool = False,
+    subtract_prev: bool = False,
 ) -> Dict[str, np.ndarray]:
     """create_samples"""
     data["DateTime"] = pd.to_datetime(data["DateTime"])
+    data["Date"], data["Time"] = data["DateTime"].dt.date, data["DateTime"].dt.time
     data.set_index("DateTime", inplace=True)
-    data["Date"] = data.index.date
-    data["Time"] = data.index.time
 
-    start_time = pd.to_datetime("09:00").time()
-    end_time = pd.to_datetime("16:59").time()
-
+    start_time, end_time = pd.to_datetime("09:00").time(), pd.to_datetime("16:59").time()
     x_list, y_list = [], []
 
+    groups = data.groupby("LocationCode")
     if target is not None:
         target["Date"] = target["DateTime"].dt.date
-        for location, group in target.groupby("LocationCode"):
-            unique_dates = group["Date"].sort_values().unique()
-            for target_date in unique_dates:
-                previous_date = target_date - pd.DateOffset(days=1)
-                location_data = data.loc[data["LocationCode"] == location]
-                previous_day_data = location_data.loc[location_data["Date"] == previous_date.date()]
-                target_day_data = location_data.loc[
-                    (location_data["Date"] == target_date) & (location_data["Time"] < start_time)
-                ]
+        groups = target.groupby("LocationCode")
 
-                if not previous_day_data.empty and not target_day_data.empty:
-                    x_data = pd.concat([
-                        previous_day_data, target_day_data
-                    ])
-                    x_list.append(x_data.drop(columns=["Date", "Time"]))
+    for location, group in groups:
+        location_data = data[data["LocationCode"] == location]
+        dates = (location_data["Date"] if target is None else group["Date"]).sort_values().unique()
 
-        x = np.array(x_list)
-        return {"X": x.reshape(x.shape[0], -1) if flatten else x}
+        for date in (dates if target is not None else dates[:-1]):
+            first_day_date = date - pd.Timedelta(days=1) if target is not None else date
+            second_day_date = date if target is not None else date + pd.Timedelta(days=1)
 
-    for _, group in data.groupby("LocationCode"):
-        unique_dates = group["Date"].sort_values().unique()
-        for i in range(len(unique_dates) - 1):
-            first_day_date = unique_dates[i]
-            second_day_date = first_day_date + pd.DateOffset(days=1)
+            first_day = location_data[location_data["Date"] == first_day_date]
+            second_day = location_data[location_data["Date"] == second_day_date]
+            if first_day.empty or second_day.empty:
+                continue
 
-            first_day = group.loc[group["Date"] == first_day_date]
-            second_day = group.loc[group["Date"] == second_day_date.date()]
+            x_data = pd.concat([first_day, second_day[second_day["Time"] < start_time]])
+            prev_y = first_day[
+                (first_day["Time"] >= start_time) & (first_day["Time"] <= end_time)
+            ]["Power(mW)"]
 
-            if not first_day.empty and not second_day.empty:
-                x_data = pd.concat([
-                    first_day, second_day[second_day["Time"] < start_time]
-                ])
-                y_data = second_day[
-                    (second_day["Time"] >= start_time) & (second_day["Time"] <= end_time)
-                ]["Power(mW)"]
+            if target is None:
+                y_data = second_day.loc[
+                    (second_day["Time"] >= start_time) & (second_day["Time"] <= end_time),
+                    "Power(mW)"
+                ].reset_index(drop=True)
+                prev_y = prev_y.reset_index(drop=True)
+                y = y_data - prev_y if subtract_prev else y_data
 
-                x_list.append(x_data.drop(columns=["Date", "Time"]))
-                y_list.append(y_data)
+            y_list.append(prev_y if target is not None else y)
+            x_list.append(x_data.drop(columns=["Date", "Time"]))
 
     x = np.array(x_list)
     y = np.array(y_list)
+    return {
+        "X": x.reshape(x.shape[0], -1) if flatten else x, 
+        "prev_y" if target is not None else "y": y
+    }
 
-    return {"X": x.reshape(x.shape[0], -1) if flatten else x, "y": y}
+def post_process(predictions: np.ndarray) -> np.ndarray:
+    """post_process"""
+    if predictions.ndim > 1:
+        predictions = predictions.ravel()
+    predictions = np.maximum(predictions, 0)
+    predictions = predictions.round(2)
+    return predictions
