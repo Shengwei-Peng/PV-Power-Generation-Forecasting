@@ -232,3 +232,18 @@ def create_samples(
         "X": x.reshape(x.shape[0], -1) if flatten else x, 
         "prev_y" if target is not None else "y": y
     }
+
+def merge_external(data: pd.DataFrame, external_file: str) -> pd.DataFrame:
+    """merge_external"""
+    external = pd.read_csv(external_file)
+    data["DateTime"] = pd.to_datetime(data["DateTime"])
+    external["yyyymmddhh"] = pd.to_datetime(external["yyyymmddhh"])
+    cols = [col for col in external.columns if col not in ["yyyymmddhh", "# stno"]]
+    merged = pd.merge(
+        data,
+        external[["yyyymmddhh"] + cols],
+        left_on="DateTime",
+        right_on="yyyymmddhh",
+        how="left"
+    )
+    return merged.drop(columns=["yyyymmddhh"])
