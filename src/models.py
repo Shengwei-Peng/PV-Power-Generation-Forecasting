@@ -32,7 +32,7 @@ class Model:
 
     def fit(self, train_x: np.ndarray, train_y: np.ndarray) -> None:
         """fit"""
-        self._build_model(train_x)
+        self._build_model(train_x, train_y)
 
         train_x_tensor = torch.tensor(train_x, dtype=torch.float32).to(self.device)
         train_y_tensor = torch.tensor(train_y, dtype=torch.float32).to(self.device)
@@ -69,43 +69,76 @@ class Model:
         """save"""
         torch.save(self.model, save_path)
 
-    def _build_model(self, x: np.ndarray) -> None:
+    def _build_model(self, x: np.ndarray, y: np.ndarray) -> None:
         if self.model_type == "MLP":
             self.model = MLP(
-                x.shape[1], self.hidden_size, 1, num_layers=self.num_layers
+                x.shape[1], self.hidden_size, y.shape[1], num_layers=self.num_layers
             )
         elif self.model_type == "LSTM":
             self.model = LSTM(
-                x.shape[2], self.hidden_size, x.shape[2], num_layers=self.num_layers
+                x.shape[2], self.hidden_size, y.shape[1], num_layers=self.num_layers
             )
         elif self.model_type == "Transformer":
             self.model = Transformer(
-                x.shape[2], self.hidden_size, x.shape[2], num_layers=self.num_layers
+                x.shape[2], self.hidden_size, y.shape[1], num_layers=self.num_layers
             )
         self.model = self.model.to(self.device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.lr)
         self.model.train()
 
 
 class MLP(nn.Module):
     """MLP"""
-    def __init__(self, input_size: int, hidden_size: int, output_size: int, num_layers: int):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        output_size: int,
+        num_layers: int = 2,
+        dropout_prob: float = 0.5,
+        activation: str = "ReLU",
+        use_batch_norm: bool = False
+    ):
         super().__init__()
-        self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(input_size, hidden_size))
-        self.layers.append(nn.ReLU())
+        if num_layers < 1:
+            raise ValueError("num_layers must be at least 1")
+
+        activation_fn = {
+            "ReLU": nn.ReLU,
+            "LeakyReLU": nn.LeakyReLU,
+            "Tanh": nn.Tanh,
+            "Sigmoid": nn.Sigmoid
+        }
+
+        layers = []
+        layers.append(nn.Linear(input_size, hidden_size))
+        if use_batch_norm:
+            layers.append(nn.BatchNorm1d(hidden_size))
+        layers.append(activation_fn[activation]())
+        layers.append(nn.Dropout(dropout_prob))
 
         for _ in range(num_layers - 1):
-            self.layers.append(nn.Linear(hidden_size, hidden_size))
-            self.layers.append(nn.ReLU())
+            layers.append(nn.Linear(hidden_size, hidden_size))
+            if use_batch_norm:
+                layers.append(nn.BatchNorm1d(hidden_size))
+            layers.append(activation_fn[activation]())
+            layers.append(nn.Dropout(dropout_prob))
 
-        self.layers.append(nn.Linear(hidden_size, output_size))
+        layers.append(nn.Linear(hidden_size, output_size))
+
+        self.model = nn.Sequential(*layers)
+        self._initialize_weights()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """forward"""
-        for layer in self.layers:
-            x = layer(x)
-        return x
+        return self.model(x)
+
+    def _initialize_weights(self):
+        for m in self.model:
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
 
 
 class LSTM(nn.Module):
