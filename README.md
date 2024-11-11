@@ -1,4 +1,4 @@
-# PV-Power-Generation-Forecast
+# PV-Power-Generation-Forecasting
 
 ## 📚 Table of Contents
 - [Overview](#Overview)
