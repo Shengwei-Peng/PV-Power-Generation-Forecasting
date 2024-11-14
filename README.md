@@ -12,11 +12,11 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 ## 💻 Installation
 1. Clone the repository:
     ```sh
-    git clone https://github.com/Shengwei-Peng/PV-Power-Generation-Forecast.git
+    git clone https://github.com/Shengwei-Peng/PV-Power-Generation-Forecasting.git
     ```
 2. Navigate to the project directory:
     ```sh
-    cd PV-Power-Generation-Forecast
+    cd PV-Power-Generation-Forecasting
     ```
 3. Install the required dependencies:
     ```sh
