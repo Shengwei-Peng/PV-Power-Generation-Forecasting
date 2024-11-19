@@ -47,4 +47,4 @@ The raw data CSV file contains the following columns:
 | 03  | Ken       | 2024-11-18  |   1936269.36 | Average (Overall)   |
 | 04  | Ken       | 2024-11-18  |   1811221.68 | Average (10-Minute) |
 | 05  | Benson    | 2024-11-18  |   1837177.48 | Average total error |
-| 05  | Daniel    | 2024-11-19  |   1720059.50 | All 76              |
+| 06  | Daniel    | 2024-11-19  |   1720059.50 | All 76              |
