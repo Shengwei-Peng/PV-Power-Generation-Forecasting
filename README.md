@@ -42,9 +42,13 @@ The raw data CSV file contains the following columns:
 
 | ID  | Submitter | Upload Time | Public Score | Note                |
 | --- | --------- | ----------- | ------------:| ------------------- |
-| 01  | Ken       | 2024-11-18  |   2080700.95 | Previous day        |
+| 01  | Ken       | 2024-11-18  |   2080700.95 |                     |
 | 02  | Ken       | 2024-11-18  |   1789119.30 | All zero            |
 | 03  | Ken       | 2024-11-18  |   1936269.36 | Average (Overall)   |
 | 04  | Ken       | 2024-11-18  |   1811221.68 | Average (10-Minute) |
 | 05  | Benson    | 2024-11-18  |   1837177.48 | Average total error |
-| 06  | Daniel    | 2024-11-19  |   1720059.50 | All 76              |
+| 06  | Ken       | 2024-11-19  |   1987431.54 |                     |
+| 07  | Daniel    | 2024-11-19  |   1720059.50 | All 76              |
+| 08  | Ken       | 2024-11-19  |    985780.43 |                     |
+| 09  | Ken       | 2024-11-19  |    854752.05 |                     |
+| 10  | Ken       | 2024-11-19  |   1072685.57 | Previous day        |
