@@ -52,3 +52,5 @@ The raw data CSV file contains the following columns:
 | 08  | Ken       | 2024-11-19  |    985780.43 |                     |
 | 09  | Ken       | 2024-11-19  |    854752.05 |                     |
 | 10  | Ken       | 2024-11-19  |   1072685.57 | Previous day        |
+| 11  | Ken       | 2024-11-20  |    824205.41 |                     |
+| 12  | Ken       | 2024-11-20  |    628281.62 | External Data       |
