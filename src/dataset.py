@@ -13,18 +13,18 @@ class Dataset:
         self,
         train_file: Union[Path, str],
         test_file: Optional[Union[Path, str]] = None,
-        target_file: Optional[Union[Path, str]] = None,
+        upload_file: Optional[Union[Path, str]] = None,
     ) -> None:
         train_data = pd.read_csv(train_file)
         test_data = pd.read_csv(test_file) if test_file else None
-        target = parse_target(pd.read_csv(target_file)) if target_file else None
-        self.dataset = self.pre_process(train_data, test_data, target)
+        upload = pd.read_csv(upload_file) if upload_file else None
+        self.dataset = self.pre_process(train_data, test_data, upload)
 
     def pre_process(
         self,
         train_data: pd.DataFrame,
         test_data: Optional[pd.DataFrame] = None,
-        target: Optional[pd.DataFrame] = None,
+        upload: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
         """pre_process"""
         raise NotImplementedError(
@@ -101,7 +101,8 @@ def resample_data_by_10min(data: pd.DataFrame) -> pd.DataFrame:
 
 def encode_datetime(data: pd.DataFrame) -> pd.DataFrame:
     """encode_datetime"""
-    data["DateTime"] = pd.to_datetime(data["DateTime"])
+    data = data.copy()
+    data.loc[:, "DateTime"] = pd.to_datetime(data["DateTime"])
     data["timestamp"] = data["DateTime"].astype("int64") // 10**9
     data["month"] = data["DateTime"].dt.month
     data["day"] = data["DateTime"].dt.day
@@ -178,65 +179,10 @@ def filter_nan_days(data: pd.DataFrame) -> pd.DataFrame:
 
     return filtered_data.drop(columns="Date")
 
-def create_samples(
-    data: pd.DataFrame,
-    target: pd.DataFrame = None,
-    flatten: bool = False,
-    subtract_prev: bool = False,
-) -> Dict[str, np.ndarray]:
-    """create_samples"""
-    data["DateTime"] = pd.to_datetime(data["DateTime"])
-    data["Date"], data["Time"] = data["DateTime"].dt.date, data["DateTime"].dt.time
-    data.set_index("DateTime", inplace=True)
-
-    start_time, end_time = pd.to_datetime("09:00").time(), pd.to_datetime("16:59").time()
-    x_list, y_list = [], []
-
-    groups = data.groupby("LocationCode")
-    if target is not None:
-        target["Date"] = target["DateTime"].dt.date
-        groups = target.groupby("LocationCode")
-
-    for location, group in groups:
-        location_data = data[data["LocationCode"] == location]
-        dates = (location_data["Date"] if target is None else group["Date"]).sort_values().unique()
-
-        for date in (dates if target is not None else dates[:-1]):
-            first_day_date = date - pd.Timedelta(days=1) if target is not None else date
-            second_day_date = date if target is not None else date + pd.Timedelta(days=1)
-
-            first_day = location_data[location_data["Date"] == first_day_date]
-            second_day = location_data[location_data["Date"] == second_day_date]
-            if first_day.empty or second_day.empty:
-                continue
-
-            x_data = pd.concat([first_day, second_day[second_day["Time"] < start_time]])
-            prev_y = first_day[
-                (first_day["Time"] >= start_time) & (first_day["Time"] <= end_time)
-            ]["Power(mW)"]
-
-            if target is None:
-                y_data = second_day.loc[
-                    (second_day["Time"] >= start_time) & (second_day["Time"] <= end_time),
-                    "Power(mW)"
-                ].reset_index(drop=True)
-                prev_y = prev_y.reset_index(drop=True)
-                y = y_data - prev_y if subtract_prev else y_data
-
-            y_list.append(prev_y if target is not None else y)
-            x_list.append(x_data.drop(columns=["Date", "Time"]))
-
-    x = np.array(x_list)
-    y = np.array(y_list)
-    return {
-        "X": x.reshape(x.shape[0], -1) if flatten else x, 
-        "prev_y" if target is not None else "y": y
-    }
-
 def merge_external(data: pd.DataFrame, external_file: str) -> pd.DataFrame:
     """merge_external"""
     external = pd.read_csv(external_file)
-    data["DateTime"] = pd.to_datetime(data["DateTime"])
+    data.loc[:, "DateTime"] = pd.to_datetime(data["DateTime"])
     external["yyyymmddhh"] = pd.to_datetime(external["yyyymmddhh"])
     cols = [col for col in external.columns if col not in ["yyyymmddhh", "# stno"]]
     merged = pd.merge(
