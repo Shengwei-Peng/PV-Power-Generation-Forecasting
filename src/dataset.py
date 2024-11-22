@@ -180,16 +180,44 @@ def merge_external(data: pd.DataFrame, external_file: str) -> pd.DataFrame:
     """merge_external"""
     external = pd.read_csv(external_file)
     data.loc[:, "DateTime"] = pd.to_datetime(data["DateTime"])
-    external["yyyymmddhh"] = pd.to_datetime(external["yyyymmddhh"])
-    cols = [col for col in external.columns if col not in ["yyyymmddhh", "# stno"]]
+    external["datetime"] = pd.to_datetime(external["datetime"])
+    cols = [col for col in external.columns if col not in ["datetime", "# stno"]]
     merged = pd.merge(
         data,
-        external[["yyyymmddhh"] + cols],
+        external[["datetime"] + cols],
         left_on="DateTime",
-        right_on="yyyymmddhh",
+        right_on="datetime",
         how="left"
     )
-    return merged.drop(columns=["yyyymmddhh"])
+    return merged.drop(columns=["datetime"])
+
+def add_location_details(data: pd.DataFrame) -> pd.DataFrame:
+    """add_location_details"""
+    location_details = {
+        1: (23.899444, 121.544444, 181, 5),
+        2: (23.899722, 121.544722, 175, 5),
+        3: (23.899722, 121.545000, 180, 5),
+        4: (23.899444, 121.544444, 161, 5),
+        5: (23.899444, 121.544722, 208, 5),
+        6: (23.899444, 121.544444, 208, 5),
+        7: (23.899444, 121.544444, 172, 5),
+        8: (23.899722, 121.545000, 219, 3),
+        9: (23.899444, 121.544444, 151, 3),
+        10: (23.899444, 121.544444, 223, 1),
+        11: (23.899722, 121.544722, 131, 1),
+        12: (23.899722, 121.544722, 298, 1),
+        13: (23.897778, 121.539444, 249, 5),
+        14: (23.897778, 121.539444, 197, 5),
+        15: (24.009167, 121.617222, 127, 1),
+        16: (24.008889, 121.617222, 82, 1),
+        17: (23.97512778, 121.613275, 0, 0)
+    }
+
+    data[
+        ["latitude", "longitude", "orientation", "altitude"]
+    ] = data["LocationCode"].apply(lambda x: pd.Series(location_details[x]))
+
+    return data
 
 def create_samples(
     data: pd.DataFrame,
