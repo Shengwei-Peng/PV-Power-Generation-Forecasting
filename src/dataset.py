@@ -11,19 +11,16 @@ class Dataset:
     """Dataset"""
     def __init__(
         self,
-        train_file: Union[Path, str],
-        test_file: Optional[Union[Path, str]] = None,
+        data_file: Union[Path, str],
         upload_file: Optional[Union[Path, str]] = None,
     ) -> None:
-        train_data = pd.read_csv(train_file)
-        test_data = pd.read_csv(test_file) if test_file else None
+        data = pd.read_csv(data_file)
         upload = pd.read_csv(upload_file) if upload_file else None
-        self.dataset = self.pre_process(train_data, test_data, upload)
+        self.dataset = self.pre_process(data, upload)
 
     def pre_process(
         self,
-        train_data: pd.DataFrame,
-        test_data: Optional[pd.DataFrame] = None,
+        data: pd.DataFrame,
         upload: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
         """pre_process"""
