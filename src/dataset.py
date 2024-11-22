@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Union, Optional
 import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-
+from tqdm import tqdm
 
 class Dataset:
     """Dataset"""
@@ -193,3 +193,43 @@ def merge_external(data: pd.DataFrame, external_file: str) -> pd.DataFrame:
         how="left"
     )
     return merged.drop(columns=["yyyymmddhh"])
+
+def create_samples(
+    data: pd.DataFrame,
+    reference_data: pd.DataFrame,
+    feature_columns: list,
+    target_column: list
+) -> dict:
+    """create_samples"""
+    x_list = []
+    y_list = []
+    has_target = set(target_column).issubset(data.columns)
+
+    data["DateTime"] = pd.to_datetime(data["DateTime"])
+    reference_data["DateTime"] = pd.to_datetime(reference_data["DateTime"])
+
+    for _, row in tqdm(data.iterrows(), total=data.shape[0]):
+        previous_day = row["DateTime"] - pd.Timedelta(days=1)
+
+        past_window = reference_data[
+            (reference_data["LocationCode"] == row["LocationCode"]) &
+            (reference_data["DateTime"] == previous_day)
+        ][feature_columns + target_column]
+
+        if past_window.empty:
+            continue
+
+        past_window_flat = past_window.values.flatten()
+        current_features = row[feature_columns].values
+
+        x_list.append(np.concatenate([past_window_flat, current_features]))
+        if has_target:
+            y_list.append(row[target_column])
+
+    x = np.array(x_list).astype(float)
+
+    if has_target:
+        y = np.array(y_list).astype(float).ravel()
+        return {"X": x, "y": y}
+
+    return {"X": x}
