@@ -181,7 +181,7 @@ def merge_external(data: pd.DataFrame, external_file: str) -> pd.DataFrame:
     external = pd.read_csv(external_file)
     data.loc[:, "DateTime"] = pd.to_datetime(data["DateTime"])
     external["datetime"] = pd.to_datetime(external["datetime"])
-    cols = [col for col in external.columns if col not in ["datetime", "# stno"]]
+    cols = [col for col in external.columns if col not in ["datetime"]]
     merged = pd.merge(
         data,
         external[["datetime"] + cols],
