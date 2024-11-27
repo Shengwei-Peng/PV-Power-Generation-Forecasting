@@ -91,3 +91,4 @@ The raw data CSV file contains the following columns:
 | 47  | Ken       | 2024-11-27  |     377664.51	|                     |
 | 48  | Ken       | 2024-11-27  |     402065.87	|                     |
 | 49  | Ken       | 2024-11-27  |     397547.12	|                     |
+| 50  | Ken       | 2024-11-27  |     431869.78	|                     |
