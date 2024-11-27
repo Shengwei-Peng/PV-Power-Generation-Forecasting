@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Union, Optional
 import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 class Dataset:
     """Dataset"""
