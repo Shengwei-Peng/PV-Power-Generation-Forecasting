@@ -40,6 +40,9 @@ The raw data CSV file contains the following columns:
 
 ## 📈 Results
 
+<details>
+    <summary>Show/Hide Results Table</summary>
+
 | ID  | Submitter | Upload Time |  Public Score | Note                |
 | --- | --------- | ----------- | -------------:| ------------------- |
 | 01  | Ken       | 2024-11-18  |    2080700.95 |                     |
@@ -93,7 +96,9 @@ The raw data CSV file contains the following columns:
 | 49  | Ken       | 2024-11-27  |     397547.12	|                     |
 | 50  | Ken       | 2024-11-27  |     431869.78	|                     |
 | 51  | Ken       | 2024-11-28  |     388686.62 |                     |
-| 52  | Ken       | 2024-11-28  | **366082.67**	|                     |
+| 52  | Ken       | 2024-11-28  |     366082.67	|                     |
 | 53  | Ken       | 2024-11-28  |     394886.78 |                     |
 | 54  | Ken       | 2024-11-28  |     386407.25 |                     |
-| 54  | Ken       | 2024-11-28  |     386407.25 |                     |
+| 55  | Ken       | 2024-11-28  | **356359.07** |                     |
+
+</details>
