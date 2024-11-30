@@ -1,82 +1,7 @@
 """dataset"""
 from pathlib import Path
-from typing import Dict, Tuple, Union, Optional
-
-import pandas as pd
-import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
 from tqdm.auto import tqdm
-
-class Dataset:
-    """Dataset"""
-    def __init__(
-        self,
-        data_file: Union[Path, str],
-        upload_file: Optional[Union[Path, str]] = None,
-    ) -> None:
-        data = pd.read_csv(data_file)
-        upload = pd.read_csv(upload_file) if upload_file else None
-        self.dataset = self.pre_process(data, upload)
-
-    def pre_process(
-        self,
-        data: pd.DataFrame,
-        upload: Optional[pd.DataFrame] = None,
-    ) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
-        """pre_process"""
-        raise NotImplementedError(
-            "Subclasses must implement 'pre_process' for custom data preprocessing."
-        )
-
-    def __str__(self) -> str:
-        def format_structure(data, indent=1):
-            lines = []
-            indent_space = "  " * indent
-
-            for key, value in data.items():
-                if isinstance(value, dict):
-                    nested = format_structure(value, indent + 1)
-                    lines.append(f'{indent_space}"{key}": {{\n{nested}\n{indent_space}}}')
-                else:
-                    shape_info = f"{type(value).__name__}{value.shape}"
-                    lines.append(f'{indent_space}"{key}": {shape_info}')
-            return ",\n".join(lines)
-
-        return f"{{\n{format_structure(self.dataset)}\n}}"
-
-    def __getitem__(self, key: str):
-        if key in self.dataset:
-            return self.DataProxy(self.dataset[key])
-        raise KeyError(f"Key '{key}' not found in dataset.")
-
-    class DataProxy:
-        """DataProxy"""
-        def __init__(self, data):
-            self.data = data
-
-        def __getitem__(self, key):
-            if key in self.data:
-                value = self.data[key]
-                return Dataset.DataProxy(value) if isinstance(value, dict) else value
-            raise KeyError(f"Key '{key}' not found.")
-
-        def __iter__(self):
-            return iter(self.data)
-
-        def keys(self):
-            """keys"""
-            return self.data.keys()
-
-        def items(self):
-            """items"""
-            return self.data.items()
-
-        def __len__(self):
-            return len(self.data)
-
-        def __repr__(self):
-            return repr(self.data)
-
+import pandas as pd
 
 def resample_data_by_10min(data: pd.DataFrame) -> pd.DataFrame:
     """resample_data_by_10min"""
@@ -99,19 +24,13 @@ def resample_data_by_10min(data: pd.DataFrame) -> pd.DataFrame:
 def encode_datetime(data: pd.DataFrame) -> pd.DataFrame:
     """encode_datetime"""
     data = data.copy()
-    data.loc[:, "DateTime"] = pd.to_datetime(data["DateTime"])
+    data["DateTime"] = pd.to_datetime(data["DateTime"])
     data["timestamp"] = data["DateTime"].astype("int64") // 10**9
     data["month"] = data["DateTime"].dt.month
     data["day"] = data["DateTime"].dt.day
     data["hour"] = data["DateTime"].dt.hour
     data["minute"] = data["DateTime"].dt.minute
     return data
-
-def create_time_series_data(x: np.ndarray, look_back_num: int) -> Tuple[np.ndarray, np.ndarray]:
-    """create_time_series_data"""
-    x_ts = sliding_window_view(x, window_shape=(look_back_num, x.shape[1]))[:-1, 0, :, :]
-    y_ts = x[look_back_num:, :]
-    return x_ts, y_ts
 
 def parse_target(target: pd.DataFrame) -> pd.DataFrame:
     """parse_target"""
@@ -161,30 +80,14 @@ def generate_full_data(
 
     return filled_data[data.columns]
 
-def filter_nan_days(data: pd.DataFrame) -> pd.DataFrame:
-    """filter_nan_days"""
-    data["DateTime"] = pd.to_datetime(data["DateTime"])
-    data["Date"] = data["DateTime"].dt.date
-
-    filtered_data = pd.concat(
-        [
-            day_data for _, group in data.groupby("LocationCode")
-            for _, day_data in group.groupby("Date")
-            if not day_data.isna().any().any()
-        ]
-    ).reset_index(drop=True)
-
-    return filtered_data.drop(columns="Date")
-
-def merge_external(data: pd.DataFrame, external_file: str) -> pd.DataFrame:
+def merge_external(data: pd.DataFrame, external_data: pd.DataFrame) -> pd.DataFrame:
     """merge_external"""
-    external = pd.read_csv(external_file)
     data.loc[:, "DateTime"] = pd.to_datetime(data["DateTime"])
-    external["datetime"] = pd.to_datetime(external["datetime"])
-    cols = [col for col in external.columns if col not in ["datetime"]]
+    external_data["datetime"] = pd.to_datetime(external_data["datetime"])
+    cols = [col for col in external_data.columns if col not in ["datetime"]]
     merged = pd.merge(
         data,
-        external[["datetime"] + cols],
+        external_data[["datetime"] + cols],
         left_on="DateTime",
         right_on="datetime",
         how="left"
@@ -219,42 +122,101 @@ def add_location_details(data: pd.DataFrame) -> pd.DataFrame:
 
     return data
 
+def prepare_external_data(input_dir: str | Path, output_folder: str | Path) -> pd.DataFrame:
+    """prepare_external_data"""
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    external_data = None
+    for file in sorted(Path(input_dir).glob("*.csv")):
+        df = pd.read_csv(file)
+        df["datetime"] = pd.to_datetime(df["datetime"])
+        df.set_index("datetime", inplace=True)
+        df = df.resample("10min").mean().interpolate("time").fillna(0)
+        df.rename(columns={col: f"{file.stem} {col}" for col in df.columns}, inplace=True)
+        external_data = (
+            df if external_data is None else external_data.merge(df, on="datetime", how="inner")
+        )
+
+    external_data.reset_index(inplace=True)
+    external_data.to_csv(output_folder / "external_data.csv", index=False, encoding="utf-8")
+
+    return external_data
+
+def get_data(
+    date_time: pd.Timestamp,
+    location_code: int,
+    external_data: pd.DataFrame,
+    reference_data: pd.DataFrame,
+    feature_columns: list
+) -> pd.Series:
+    """get_data"""
+    features = reference_data[
+        (reference_data["LocationCode"] == location_code) &
+        (reference_data["DateTime"] == date_time)
+    ].copy()
+
+    if features.empty:
+        features = external_data[
+            (external_data["datetime"] == date_time)
+        ].copy()
+        if features.empty:
+            return None
+        features.loc[:, "LocationCode"] = location_code
+        features.loc[:, "DateTime"] = date_time
+        features.loc[:, "Power(mW)"] = None
+        features = encode_datetime(features)
+        features = add_location_details(features)
+
+    return features[feature_columns + ["Power(mW)"]].squeeze()
+
 def create_samples(
     data: pd.DataFrame,
+    external_data: pd.DataFrame,
     reference_data: pd.DataFrame,
-    feature_columns: list,
-    target_column: list
+    feature_columns: list[str],
+    output_folder: str | Path,
 ) -> dict:
     """create_samples"""
-    x_list = []
-    y_list = []
-    has_target = set(target_column).issubset(data.columns)
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     data["DateTime"] = pd.to_datetime(data["DateTime"])
     reference_data["DateTime"] = pd.to_datetime(reference_data["DateTime"])
+    external_data["datetime"] = pd.to_datetime(external_data["datetime"])
 
+    data = data[
+        data["DateTime"].dt.time.between(pd.Timestamp("09:00").time(), pd.Timestamp("16:59").time())
+    ]
+    x_list, y_list = [], []
+    is_train = "Power(mW)" in data.columns
     for _, row in tqdm(data.iterrows(), total=data.shape[0]):
-        previous_day = row["DateTime"] - pd.Timedelta(days=1)
+        date_time = row["DateTime"]
+        location_code = row["LocationCode"]
 
-        past_window = reference_data[
-            (reference_data["LocationCode"] == row["LocationCode"]) &
-            (reference_data["DateTime"] == previous_day)
-        ][feature_columns + target_column]
-
-        if past_window.empty:
+        yesterday_data = get_data(
+            date_time - pd.Timedelta(days=1),
+            location_code, external_data, reference_data, feature_columns
+        )
+        if yesterday_data is None:
             continue
 
-        past_window_flat = past_window.values.flatten()
-        current_features = row[feature_columns].values
+        morning_data = get_data(
+            date_time.replace(hour=8, minute=50),
+            location_code, external_data, reference_data, feature_columns
+        )
 
-        x_list.append(np.concatenate([past_window_flat, current_features]))
-        if has_target:
-            y_list.append(row[target_column])
+        current_data = row[feature_columns]
+        x = pd.concat(
+            [yesterday_data, morning_data, current_data], axis=0
+        ).reset_index(drop=True)
 
-    x = np.array(x_list).astype(float)
+        x_list.append(x)
+        if is_train:
+            y_list.append(row["Power(mW)"])
 
-    if has_target:
-        y = np.array(y_list).astype(float).ravel()
-        return {"X": x, "y": y}
-
-    return {"X": x}
+    if is_train:
+        pd.DataFrame(x_list).to_csv(output_folder / "train_x.csv", index=False)
+        pd.Series(y_list).to_csv(output_folder / "train_y.csv", index=False)
+    else:
+        pd.DataFrame(x_list).to_csv(output_folder / "test_x.csv", index=False)
