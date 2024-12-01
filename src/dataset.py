@@ -122,13 +122,13 @@ def add_location_details(data: pd.DataFrame) -> pd.DataFrame:
 
     return data
 
-def prepare_external_data(input_dir: str | Path, output_folder: str | Path) -> pd.DataFrame:
+def prepare_external_data(input_folder: str | Path, output_folder: str | Path) -> pd.DataFrame:
     """prepare_external_data"""
     output_folder = Path(output_folder)
     output_folder.mkdir(parents=True, exist_ok=True)
 
     external_data = None
-    for file in sorted(Path(input_dir).glob("*.csv")):
+    for file in sorted(Path(input_folder).glob("*.csv")):
         df = pd.read_csv(file)
         df["datetime"] = pd.to_datetime(df["datetime"])
         df.set_index("datetime", inplace=True)
@@ -143,13 +143,13 @@ def prepare_external_data(input_dir: str | Path, output_folder: str | Path) -> p
 
     return external_data
 
-def merge_csv(input_dirs: list[str | Path], output_folder: str | Path) -> pd.DataFrame:
+def merge_csv(input_folder: list[str | Path], output_folder: str | Path) -> pd.DataFrame:
     """merge_csv"""
     output_folder = Path(output_folder)
     output_folder.mkdir(parents=True, exist_ok=True)
 
     all_data = []
-    for directory in input_dirs:
+    for directory in input_folder:
         for file in sorted(Path(directory).glob("*.csv")):
             df = pd.read_csv(file)
             all_data.append(df)
@@ -157,7 +157,7 @@ def merge_csv(input_dirs: list[str | Path], output_folder: str | Path) -> pd.Dat
     combined_data = pd.concat(all_data, ignore_index=True)
     combined_data["DateTime"] = pd.to_datetime(combined_data["DateTime"])
     combined_data.sort_values(by=["LocationCode", "DateTime"], inplace=True)
-    combined_data.to_csv(output_folder / "all_data.csv", index=False)
+    combined_data.to_csv(output_folder / "training_data.csv", index=False)
 
     return combined_data
 
