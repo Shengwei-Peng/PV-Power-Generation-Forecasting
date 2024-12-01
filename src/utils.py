@@ -44,14 +44,14 @@ def train_and_predict(
     model_name: str,
     dataset: dict[str, dict[str, np.ndarray]],
     upload_template: str | Path,
-    output_dir: str | Path,
+    output_folder: str | Path,
 ) -> None:
     """train_and_predict"""
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
-    model_file = output_dir / f"{model_name}_model.pkl"
-    predictions_file = output_dir / f"{model_name}_pred.csv"
+    model_file = output_folder / f"{model_name}_model.pkl"
+    predictions_file = output_folder / f"{model_name}_pred.csv"
 
     model.fit(dataset["train"]["X"], dataset["train"]["y"])
     predictions = model.predict(dataset["test"]["X"])
