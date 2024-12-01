@@ -2,9 +2,14 @@
 
 ## 📚 Table of Contents
 - [Overview](#Overview)
+- [Usage](#usage)
 - [Installation](#Installation)
 - [Dataset](#Dataset)
 - [Results](#Results)
+- [Acknowledgements](#acknowledgements)
+- [Contributing](#Contributing)
+- [License](#license)
+- [Contact](#contact)
 
 ## 🌞 Overview
 This project focuses on predicting solar photovoltaic (PV) power generation based on regional microclimate data. The objective is to forecast the power output of PV devices installed in various terrains using environmental data such as temperature, humidity, wind speed, solar radiation, and rainfall.
@@ -37,6 +42,10 @@ The raw data CSV file contains the following columns:
 | `Humidity(%)`         | Humidity percentage                              | Float         |
 | `Sunlight(Lux)`       | Sunlight intensity in Lux                        | Float         |
 | `Power(mW)`           | **Target:** Power output in mW                   | Float         |
+
+### External Data
+
+## 🛠️ Usage
 
 ## 📈 Results
 
@@ -102,3 +111,29 @@ The raw data CSV file contains the following columns:
 | 55  | Ken       | 2024-11-28  | **356359.07** |                     |
 
 </details>
+
+## 🙏 Acknowledgements
+
+We would like to express our sincere gratitude to the following organizations for their support and contributions to this project:
+
+- **Competition Guidance Unit**: Information and Technology Education Department of the Ministry of Education.
+- **Competition Planning Unit**: Artificial Intelligence Competition and Annotation Data Collection Project Office of the Ministry of Education.
+- **Topic Provider**: Department of Information Engineering, National Dong Hwa University.
+- **Platform Sponsor**: Trend Micro.
+
+## 🤝 Contributing
+
+We welcome contributions to the project! Please follow the guidelines below:
+
+1. Fork the repository.
+2. Create a new branch (`feature/your-feature-name`).
+3. Commit your changes.
+4. Submit a pull request.
+
+## ⚖️ License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](./LICENSE) file for more details.
+
+## 📧 Contact
+
+For any questions or inquiries, please contact m11207330@mail.ntust.edu.tw
