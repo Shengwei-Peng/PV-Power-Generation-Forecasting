@@ -139,9 +139,27 @@ def prepare_external_data(input_dir: str | Path, output_folder: str | Path) -> p
         )
 
     external_data.reset_index(inplace=True)
-    external_data.to_csv(output_folder / "external_data.csv", index=False, encoding="utf-8")
+    external_data.to_csv(output_folder / "external_data.csv", index=False)
 
     return external_data
+
+def merge_csv(input_dirs: list[str | Path], output_folder: str | Path) -> pd.DataFrame:
+    """merge_csv"""
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    all_data = []
+    for directory in input_dirs:
+        for file in sorted(Path(directory).glob("*.csv")):
+            df = pd.read_csv(file)
+            all_data.append(df)
+
+    combined_data = pd.concat(all_data, ignore_index=True)
+    combined_data["DateTime"] = pd.to_datetime(combined_data["DateTime"])
+    combined_data.sort_values(by=["LocationCode", "DateTime"], inplace=True)
+    combined_data.to_csv(output_folder / "all_data.csv", index=False)
+
+    return combined_data
 
 def get_data(
     date_time: pd.Timestamp,
