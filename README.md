@@ -29,37 +29,69 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
     ```
 
 ## 📊 Dataset
-### Raw Data
-The raw data CSV file contains the following columns:
+### 1. [TrainingData](TrainingData) & [TrainingData_Additional](TrainingData_Additional)
+- [AI CUP 2024](https://tbrain.trendmicro.com.tw/Competitions/Details/36)
+    | **Column Name**       | **Description**                                  | **Unit**      |
+    | --------------------- | ------------------------------------------------ | ------------: |
+    | `LocationCode`        | Location identifier                              | -             |
+    | `DateTime`            | Timestamp of the measurement                     | -             |
+    | `WindSpeed(m/s)`      | Wind speed in meters per second                  | m/s           |
+    | `Pressure(hpa)`       | Atmospheric pressure in hectopascals             | hPa           |
+    | `Temperature(°C)`     | Temperature in degrees Celsius                   | °C            |
+    | `Humidity(%)`         | Humidity percentage                              | %             |
+    | `Sunlight(Lux)`       | Sunlight intensity in lux                        | Lux           |
+    | `Power(mW)`           | Power output in milliwatts                       | mW            |
 
-| **Column Name**       | **Description**                                  | **Data Type** |
-| --------------------- | ------------------------------------------------ | ------------- |
-| `LocationCode`        | Location identifier                              | Integer       |
-| `DateTime`            | Timestamp of measurement                         | DateTime      |
-| `WindSpeed(m/s)`      | Wind speed in m/s                                | Float         |
-| `Pressure(hpa)`       | Atmospheric pressure in hPa                      | Float         |
-| `Temperature(°C)`     | Temperature in °C                                | Float         |
-| `Humidity(%)`         | Humidity percentage                              | Float         |
-| `Sunlight(Lux)`       | Sunlight intensity in Lux                        | Float         |
-| `Power(mW)`           | **Target:** Power output in mW                   | Float         |
-
-### External Data
-- #### IFENGL2/IHUALIEN3
-    |    Column Name |                         Description | Data Type |
-    | --------------:| -----------------------------------:| ---------:|
-    |    Temperature |        Ambient air temperature.(°C) |     float |
-    |      Dew Point | Temperature for air saturation.(°C) |     float |
-    |       Humidity |          Air moisture content . (%) |     float |
-    |           Wind | Direction of wind movement.(degree) |     float |
-    |          Speed |                 Wind speed . (km/h) |     float |
-    |           Gust |              Peak wind speed.(km/h) |     float |
-    |       Pressure |    Atmospheric pressure level.(hPa) |     float |
-    |   Precip. Rate |            Rainfall intensity .(mm) |     float |
-    | Precip. Accum. |          Total rainfall amount.(mm) |     float |
-    |             UV |        Ultraviolet radiation index. |     float |
-    |          Solar |    Solar radiation intensity.(w/m²) |     float |
+### 2. [External Data](ExternalData)
+- [IFENGL2](https://www.wunderground.com/dashboard/pws/IFENGL2) & [IHUALIEN3](https://www.wunderground.com/dashboard/pws/IHUALIEN3)
+    | **Column Name**       | **Description**                        | **Unit**     |
+    |:--------------------- |:-------------------------------------- | -----------: |
+    | `Temperature`         | Ambient air temperature                | °C           |
+    | `Dew Point`           | Temperature for air saturation         | °C           |
+    | `Humidity`            | Air moisture content                   | %            |
+    | `Wind`                | Direction of wind movement             | degrees      |
+    | `Speed`               | Wind speed                             | km/h         |
+    | `Gust`                | Peak wind speed                        | km/h         |
+    | `Pressure`            | Atmospheric pressure level             | hPa          |
+    | `Precip. Rate`        | Rainfall intensity                     | mm           |
+    | `Precip. Accum.`      | Total rainfall amount                  | mm           |
+    | `UV`                  | Ultraviolet radiation index            | -            |
+    | `Solar`               | Solar radiation intensity              | w/m²         |
 
 ## 🛠️ Usage
+
+Follow the steps in `main.ipynb`:
+
+### Step 1: Import and Setup  
+Import necessary libraries and functions for data handling and model training.
+
+### Step 2: Data Preprocessing (Optional)  
+If `train_x.csv`, `train_y.csv`, and `test_x.csv` are not available, preprocess the raw data to generate them.
+
+### Step 3: Data Loading  
+Load the preprocessed data and define feature columns for training.
+
+### Step 4: Model Training  
+Train models (CatBoost, LightGBM, XGBoost) and evaluate performance using **Mean Absolute Error (MAE)**.
+
+### Step 5: Ensemble  
+Combine predictions from all models using an ensemble approach to improve accuracy, evaluated by MAE.
+
+### 📂 Final Output Structure  
+After completing the training and prediction, the following files will be generated:
+
+- `training_data.csv`: Combined data from `TrainingData` and `TrainingData_Additional`folder.
+- `external_data.csv`: Combined external data from the `ExternalData` folder.
+- `train_x.csv`: Features used for training the models.
+- `train_y.csv`: Target variable used for training the models.
+- `test_x.csv`: Features used for making predictions.
+- `catboost_model.pkl`: Trained CatBoost model.
+- `lightgbm_model.pkl`: Trained LightGBM model.
+- `xgboost_model.pkl`: Trained XGBoost model.
+- `catboost_pred.csv`: Predictions from CatBoost model.
+- `lightgbm_pred.csv`: Predictions from LightGBM model.
+- `xgboost_pred.csv`: Predictions from XGBoost model.
+- `submission.csv`: The final submission file containing the ensemble predictions.
 
 ## 📈 Results
 
