@@ -44,6 +44,20 @@ The raw data CSV file contains the following columns:
 | `Power(mW)`           | **Target:** Power output in mW                   | Float         |
 
 ### External Data
+#### IFENGL2/IHUALIEN3
+|    Column Name |                         Description | Data Type |
+| --------------:| -----------------------------------:| ---------:|
+|    Temperature |        Ambient air temperature.(°C) |     float |
+|      Dew Point | Temperature for air saturation.(°C) |     float |
+|       Humidity |          Air moisture content . (%) |     float |
+|           Wind | Direction of wind movement.(degree) |     float |
+|          Speed |                 Wind speed . (km/h) |     float |
+|           Gust |              Peak wind speed.(km/h) |     float |
+|       Pressure |    Atmospheric pressure level.(hPa) |     float |
+|   Precip. Rate |            Rainfall intensity .(mm) |     float |
+| Precip. Accum. |          Total rainfall amount.(mm) |     float |
+|             UV |        Ultraviolet radiation index. |     float |
+|          Solar |    Solar radiation intensity.(w/m²) |     float |
 
 ## 🛠️ Usage
 
