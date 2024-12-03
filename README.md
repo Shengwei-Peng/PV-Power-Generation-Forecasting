@@ -1,5 +1,6 @@
 # PV-Power-Generation-Forecasting
 ![architecture](images/architecture.png)
+
 ## 🌞 Overview
 This project focuses on predicting solar photovoltaic (PV) power generation based on regional microclimate data. The objective is to forecast the power output of PV devices installed in various terrains using environmental data such as temperature, humidity, wind speed, solar radiation, and rainfall.
 
@@ -19,8 +20,41 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 
 ## 📊 Dataset
 ### 1. [TrainingData](TrainingData) & [TrainingData_Additional](TrainingData_Additional)
+```
+TrainingData/
+├── L1_Train.csv
+├── L2_Train.csv
+├── L3_Train.csv
+├── L4_Train.csv
+├── L5_Train.csv
+├── L6_Train.csv
+├── L7_Train.csv
+├── L8_Train.csv
+├── L9_Train.csv
+├── L10_Train.csv
+├── L11_Train.csv
+├── L12_Train.csv
+├── L13_Train.csv
+├── L14_Train.csv
+├── L15_Train.csv
+├── L16_Train.csv
+└── L17_Train.csv
+```
+```
+TrainingData_Additional/
+├── L2_Train_2.csv
+├── L4_Train_2.csv
+├── L7_Train_2.csv
+├── L8_Train_2.csv
+├── L9_Train_2.csv
+├── L10_Train_2.csv
+└── L12_Train_2.csv
+```
 - [AI CUP 2024](https://tbrain.trendmicro.com.tw/Competitions/Details/36)
-    | **Column Name**      | **Description**               | **Unit** |
+    <details>
+    <summary>Show/Hide Column Table</summary>
+
+    | **Column Name**      | **Description**              | **Unit** |
     | -------------------- | ---------------------------- | -------: |
     | `LocationCode`       | Location identifier          | -        |
     | `DateTime`           | Measurement timestamp        | -        |
@@ -30,25 +64,25 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
     | `Humidity(%)`        | Humidity percentage          | %        |
     | `Sunlight(Lux)`      | Sunlight intensity           | Lux      |
     | `Power(mW)`          | Power output                 | mW       |
-
+    </details>
 
 ### 2. [External Data](ExternalData)
-- [IFENGL2](https://www.wunderground.com/dashboard/pws/IFENGL2), [IHUALIEN3](https://www.wunderground.com/dashboard/pws/IHUALIEN3)
-    | **Column Name**      | **Description**              | **Unit** |
-    | -------------------- | ---------------------------- | -------: |
-    | `Temperature`        | Air temperature              | °C       |
-    | `Dew Point`          | Dew point temperature        | °C       |
-    | `Humidity`           | Air humidity                 | %        |
-    | `Wind`               | Wind direction               | °        |
-    | `Speed`              | Wind speed                   | km/h     |
-    | `Gust`               | Peak wind speed              | km/h     |
-    | `Pressure`           | Atmospheric pressure         | hPa      |
-    | `Precip. Rate`       | Rainfall rate                | mm       |
-    | `Precip. Accum.`     | Total rainfall               | mm       |
-    | `UV`                 | UV radiation index           | -        |
-    | `Solar`              | Solar radiation              | W/m²     |
+```
+ExternalData/
+├── 72T250.csv
+├── 466990.csv
+├── COT9E0.csv
+├── COT870.csv
+├── COZ100.csv
+├── COZ150.csv
+├── IFENGL2.csv
+└── IHUALIEN3.csv
+```
 
-- [466990](https://codis.cwa.gov.tw/StationData), [72T250](https://codis.cwa.gov.tw/StationData), [C0T870](https://codis.cwa.gov.tw/StationData), [C0T9E0](https://codis.cwa.gov.tw/StationData), [C0Z100](https://codis.cwa.gov.tw/StationData), [C0Z150](https://codis.cwa.gov.tw/StationData)
+- [72T250](https://codis.cwa.gov.tw/StationData), [466990](https://codis.cwa.gov.tw/StationData), [COT9E0](https://codis.cwa.gov.tw/StationData), [C0T870](https://codis.cwa.gov.tw/StationData), [C0Z100](https://codis.cwa.gov.tw/StationData), [C0Z150](https://codis.cwa.gov.tw/StationData)
+    <details>
+    <summary>Show/Hide Column Table</summary>
+
     | **Column Name**               | **Description**               | **Unit**  |
     | ----------------------------- | ----------------------------- | --------: |
     | `Station Pressure (hPa)`      | Station-level pressure        | hPa       |
@@ -69,6 +103,27 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
     | `Ground Temp (20cm)`          | Ground temperature (20cm)     | °C        |
     | `Ground Temp (50cm)`          | Ground temperature (50cm)     | °C        |
     | `Ground Temp (100cm)`         | Ground temperature (100cm)    | °C        |
+    </details>
+
+- [IFENGL2](https://www.wunderground.com/dashboard/pws/IFENGL2), [IHUALIEN3](https://www.wunderground.com/dashboard/pws/IHUALIEN3)
+    <details>
+    <summary>Show/Hide Column Table</summary>
+
+    | **Column Name**      | **Description**              | **Unit** |
+    | -------------------- | ---------------------------- | -------: |
+    | `Temperature`        | Air temperature              | °C       |
+    | `Dew Point`          | Dew point temperature        | °C       |
+    | `Humidity`           | Air humidity                 | %        |
+    | `Wind`               | Wind direction               | °        |
+    | `Speed`              | Wind speed                   | km/h     |
+    | `Gust`               | Peak wind speed              | km/h     |
+    | `Pressure`           | Atmospheric pressure         | hPa      |
+    | `Precip. Rate`       | Rainfall rate                | mm       |
+    | `Precip. Accum.`     | Total rainfall               | mm       |
+    | `UV`                 | UV radiation index           | -        |
+    | `Solar`              | Solar radiation              | W/m²     |
+    </details>
+
 ## 🛠️ Usage
 
 ### Follow the steps in `main.ipynb`:
@@ -88,22 +143,24 @@ This project focuses on predicting solar photovoltaic (PV) power generation base
 5. **Ensemble**  
    Combine model predictions using an ensemble method and generate the final `submission.csv` for evaluation.
 
+⚠️ Warning: It is recommended to use a device with at least **64GB of RAM** and a **GPU** for training.
+
 ### 📂 Final Output Structure  
 After completing the training and prediction, the following files will be generated:
 ```
 AICUP/
-├── training_data.csv  # Combined data from `TrainingData` and `TrainingData_Additional` folder
-├── external_data.csv  # Combined external data from the `ExternalData` folder
-├── train_x.csv        # Features used for training the models
-├── train_y.csv        # Target variable used for training the models
-├── test_x.csv         # Features used for making predictions
-├── catboost_model.pkl # Trained CatBoost model
-├── lightgbm_model.pkl # Trained LightGBM model
-├── xgboost_model.pkl  # Trained XGBoost model
-├── catboost_pred.csv  # Predictions from CatBoost model
-├── lightgbm_pred.csv  # Predictions from LightGBM model
-├── xgboost_pred.csv   # Predictions from XGBoost model
-└── submission.csv     # The final submission file containing the ensemble predictions
+├── training_data.csv     # Combined data from `TrainingData` and `TrainingData_Additional` folder
+├── external_data.csv     # Combined external data from the `ExternalData` folder
+├── train_x.csv           # Features used for training the models
+├── train_y.csv           # Target variable used for training the models
+├── test_x.csv            # Features used for making predictions
+├── catboost_model.pkl    # Trained CatBoost model
+├── lightgbm_model.pkl    # Trained LightGBM model
+├── xgboost_model.pkl     # Trained XGBoost model
+├── catboost_pred.csv     # Predictions from CatBoost model
+├── lightgbm_pred.csv     # Predictions from LightGBM model
+├── xgboost_pred.csv      # Predictions from XGBoost model
+└── submission.csv        # The final submission file containing the ensemble predictions
 ```
 
 ## 📈 Results
