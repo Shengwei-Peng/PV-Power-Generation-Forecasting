@@ -163,6 +163,28 @@ AICUP/
 └── submission.csv        # The final submission file containing the ensemble predictions
 ```
 
+## 🔄 Reproduction
+
+### Run the reproduction script:
+To reproduce the results of this project, simply run the `reproduce.sh` script.
+```bash
+bash reproduce.sh
+```
+This script will automatically:
+
+- Install the required dependencies using `pip`.
+- Uses `gdown` to download necessary files from Google Drive.
+- Create a `Reproduction` folder to store the results.
+- Execute `src.reproduc` to generate the outputs.
+
+You can also find the best results and best models [here](https://drive.google.com/drive/folders/1XUAQa4prwJzOu7NBlpPzE1oW_wLvgUwj?usp=drive_link).
+
+### Retrain the models:
+If you want to retrain the models from scratch, run the following command:
+```bash
+bash reproduce.sh --retrain
+```
+
 ## 📈 Results
 
 ![score_trend](images/score_trend.png)
